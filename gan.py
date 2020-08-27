@@ -105,3 +105,16 @@ class Generator(nn.Module):
 
 
       return self.act(x_new)
+    
+ 
+
+class Aggregate(torch.nn.Module):
+    def __init__(self,gate_nn,nn):
+        super(Aggregate, self).__init__()
+        self.agg = GlobalAttention(gate_nn, nn)
+        self.act = torch.nn.Sigmoid()
+    def forward(self,x,batch=None):
+        bz,n,f = x.size()
+        x = x.reshape(bz*n,f)
+        batch = torch.tensor(to_list(bz,n)).type(torch.LongTensor)
+        return self.agg(x,batch)
