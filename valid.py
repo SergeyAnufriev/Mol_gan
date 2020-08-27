@@ -108,4 +108,9 @@ def valid_graph(A,x):
   dict_      = node_to_dict(x)      ## 1 if atom real, 0 empty node
   subgraphs_ = subgraphs(adj_list)  ## find all subgraphs by BFS algo
 
-  return valid(subgraphs_,dict_),subgraphs_
+  if valid(subgraphs_,dict_) == 0:
+    return 0,None,None
+  else:
+    for G in subgraphs_:
+      if all(dict_[x] != 0 for x in G): 
+        return 1,A[G,:,:][:,G,:],x[G,:]
