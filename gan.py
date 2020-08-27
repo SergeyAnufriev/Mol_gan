@@ -85,3 +85,23 @@ class Generator(nn.Module):
         edges = permute4D(edges_logit)
 
         return  nodes, edges
+    
+    
+  class Convolve(nn.Module):
+    def __init__(self,in_channels,out_channels,n_relations):
+      super(Convolve,self).__init__()
+
+      self.weight     = Parameter(torch.zeros(in_channels,out_channels,n_relations))  ### Look at initializations 
+      self.theta_root = Parameter(torch.zeros(in_channels,out_channels))  ### Look at initializations 
+
+    def forward(self,A,x):
+
+      A        = A[:,:,:,:-1]
+      sum_     = torch.sum(A,dim=2)
+      norm     = 1./(sum_ + torch.full(sum_.size(),1e-7))  ## look for analytical solution
+      A_new    = torch.einsum('sijcd,sicd->sijcd',A.unsqueeze(4),norm.unsqueeze(3))
+      Theta_ij = torch.einsum('abc,sijcd->sijabd',self.weight,A_new).squeeze(-1)
+      x_new    = torch.einsum('sja,sijab->sib',x,Theta_ij) + torch.matmul(x,self.theta_root)
+
+
+      return self.act(x_new)
