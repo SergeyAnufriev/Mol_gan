@@ -2,6 +2,9 @@ import torch
 from rdkit import Chem
 from molecular_metrics import MolecularMetrics
 from torch.utils.data import Dataset, DataLoader
+import numpy as np
+from rdkit.Chem import RWMol
+ 
 
 
 class Mol_dataset(Dataset,MolecularMetrics):
