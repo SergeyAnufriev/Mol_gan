@@ -87,27 +87,13 @@ class Generator(nn.Module):
         return  nodes, edges
     
     
-    
- 
 
-class Aggregate(torch.nn.Module):
-    def __init__(self,gate_nn,nn):
-        super(Aggregate, self).__init__()
-        self.agg = GlobalAttention(gate_nn, nn)
-        self.act = torch.nn.Sigmoid()
-    def forward(self,x,batch=None):
-        bz,n,f = x.size()
-        x = x.reshape(bz*n,f)
-        batch = torch.tensor(to_list(bz,n)).type(torch.LongTensor)
-        return self.agg(x,batch)
-      
   
-  
-  
+################## CONVOLUTION RELATIONAL GCN OPERATOR ###############################
+
 class Convolve(nn.Module):
     def __init__(self,in_channels,out_channels,n_relations):
       super(Convolve,self).__init__()
-
       self.weight     = Parameter(torch.zeros(in_channels,out_channels,n_relations))  ### Look at initializations 
       self.theta_root = Parameter(torch.zeros(in_channels,out_channels))  ### Look at initializations 
 
@@ -120,5 +106,68 @@ class Convolve(nn.Module):
       Theta_ij = torch.einsum('abc,sijcd->sijabd',self.weight,A_new).squeeze(-1)
       x_new    = torch.einsum('sja,sijab->sib',x,Theta_ij) + torch.matmul(x,self.theta_root)
 
+      return x_new
 
-      return self.act(x_new)
+
+####### gate_nn computes Attention score during Global aggregation ######################
+
+class gate_nn(torch.nn.Module):
+  def __init__(self,in_channels):
+    super(gate_nn,self).__init__()
+    self.lin1 = nn.Linear(in_channels,1,bias=True)
+
+  def forward(self,x):
+    return self.lin1(x)
+
+
+###### nn_ transforms nodes features ##########################
+
+class nn_(torch.nn.Module):
+  def __init__(self,in_channels,out_channels):
+    super(nn_,self).__init__()
+    self.lin2 = nn.Linear(in_channels,out_channels,bias= True)
+    self.act  = nn.Tanh()
+
+  def forward(self,x):
+    return self.act(self.lin2(x))
+
+
+######## Combines each node represenations from nn_ and sums by 
+######## gate_nn attention scores #############################
+
+
+class Aggregate(torch.nn.Module):
+    def __init__(self,gate_nn,nn):
+        super(Aggregate, self).__init__()
+        self.agg = GlobalAttention(gate_nn, nn)
+
+    def forward(self,x,batch=None):
+        bz,n,f = x.size()
+        x = x.reshape(bz*n,f)
+        batch = torch.tensor(to_list(bz,n)).type(torch.LongTensor)
+        return self.agg(x,batch)
+
+
+##### paper h1,h2,h3 = 64,32,128 
+
+class R(torch.nn.Module):
+  def __init__(self,in_channels,h_1,h_2,h_3):
+
+    super(R,self).__init__()
+    self.conv1 = Convolve(in_channels,h_1,4)
+    self.conv2 = Convolve(h_1+in_channels,h_2,4)
+    self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
+    self.lin   = nn.Linear(h_3,1,bias=True)
+    self.act_h = nn.Tanh()
+    self.act   = nn.Sigmoid()
+
+   
+  def forward(self,A,x):
+
+    h_1    = self.act_h(self.conv1(A,x))
+    h_2    = self.act_h(self.conv2(A,torch.cat((h_1,x),-1)))
+    h_G    = self.act_h(self.agr(torch.cat((h_2,x),-1)))
+    scalar = self.act_h(self.lin(h_G))
+
+    return self.act(scalar)
+
