@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.functional import one_hot
+from torch_geometric.nn import GlobalAttention
 
 
 def permute3D(A):
