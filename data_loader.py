@@ -7,8 +7,6 @@ from rdkit.Chem import RWMol
 from torch.nn.functional import one_hot
 
  
-
-
 class Mol_dataset(Dataset,MolecularMetrics):
   def __init__(self,sdf_file,atom_set=['C','O','N','F'],N=9):
     self.suppl    = Chem.SDMolSupplier(sdf_file)
