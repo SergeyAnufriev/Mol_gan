@@ -94,8 +94,9 @@ class Generator(nn.Module):
 class Convolve(nn.Module):
     def __init__(self,in_channels,out_channels,n_relations):
       super(Convolve,self).__init__()
-      self.weight     = Parameter(torch.zeros(in_channels,out_channels,n_relations))  ### Look at initializations 
-      self.theta_root = Parameter(torch.zeros(in_channels,out_channels))  ### Look at initializations 
+      
+      self.weight     = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels,n_relations), gain=1.0))
+      self.theta_root = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels), gain=1.0))
 
     def forward(self,A,x):
 
