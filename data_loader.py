@@ -121,7 +121,7 @@ class Mol_dataset(Dataset,MolecularMetrics):
     QED_  = Mol_dataset.quantitative_estimation_druglikeness_scores([mol],norm=True)
     SAS_  = Mol_dataset.synthetic_accessibility_score_scores([mol],norm=True)
 
-    reward  = LogP_*QED_*SAS_ 
+    reward  = LogP_*QED_*SAS_.astype('float32') 
     
-    return self.adj_mat(mol), self.atom_features(mol), LogP_ ,QED_, SAS_, reward.to(torch.float32)
+    return self.adj_mat(mol), self.atom_features(mol), LogP_ ,QED_, SAS_, reward
 
