@@ -123,5 +123,5 @@ class Mol_dataset(Dataset,MolecularMetrics):
 
     reward  = LogP_*QED_*SAS_ 
     
-    return self.adj_mat(mol), self.atom_features(mol), LogP_ ,QED_, SAS_, reward
+    return self.adj_mat(mol), self.atom_features(mol), LogP_ ,QED_, SAS_, reward.to(torch.float32)
 
