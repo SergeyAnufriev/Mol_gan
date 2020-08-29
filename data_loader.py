@@ -111,6 +111,11 @@ class Mol_dataset(Dataset,MolecularMetrics):
       idx = idx.tolist() 
 
     mol = self.suppl[idx]
+    
+    while mol is None:
+      idx +=1
+      mol  = self.suppl[idx]
+
 
     LogP_ = Mol_dataset.water_octanol_partition_coefficient_scores([mol],norm=True) 
     QED_  = Mol_dataset.quantitative_estimation_druglikeness_scores([mol],norm=True)
