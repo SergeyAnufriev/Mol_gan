@@ -29,3 +29,20 @@ def gan_loss_gen(A_f,x_f,netD):
     Loss_gen = criterion(output_f,label_r)
 
     return Loss_gen
+
+
+
+def wgan_dis(A_r,x_r,A_f,x_f,netD):
+
+  Loss_real = netD(A_r,x_r).mean()
+  Loss_fake = netD(A_f.detach(),x_f.detach()).mean()
+
+  return Loss_real-Loss_fake
+
+
+
+def wgan_gen(A_f,x_f,netD):
+  return netD(A_f,x_f).mean()
+
+
+
