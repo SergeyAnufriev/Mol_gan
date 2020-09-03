@@ -1,6 +1,16 @@
 import torch
 from torch import autograd
 from numpy.linalg import LinearOperator
+import wandb
+
+
+def grad_info(model):
+  total_grad = []
+  for name, param in model.named_parameters():
+    grad = list(torch.flatten(param.grad).numpy())
+    wandb.log({name: wandb.Histogram(grad)})
+    total_grad +=grad 
+  wandb.log({'Grad_L2':np.linalg.norm(total_grad)})
 
 
 class JacobianVectorProduct(LinearOperator):
