@@ -42,5 +42,16 @@ def wgan_dis(A_r,x_r,A_f,x_f,netD):
 def wgan_gen(A_f,x_f,netD):
   return netD(A_f,x_f).mean()
 
+def grad_penalty(A_r,x_r,A_f,x_f):
+    eps   = torch.rand(A_r.size()[0])
+    eps_x = torch.unsqueeze(torch.unsqueeze(eps,-1),-1)
+    eps_A = torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(eps,-1),-1),-1)
+    x_hat = eps_x*x_r + (1-eps_x)*x_f
+    A_hat = eps_A*A_r + (1-eps_A)*A_f
+    gradients_x = grad(outputs=d_hat, inputs=x_hat,
+                              grad_outputs=torch.ones(d_hat.size()),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
 
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+    
 
