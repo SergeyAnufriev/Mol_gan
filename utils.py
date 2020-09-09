@@ -50,8 +50,8 @@ def grad_penalty(A_r,x_r,A_f,x_f,netD):
     eps_x = torch.unsqueeze(torch.unsqueeze(eps,-1),-1)
     eps_A = torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(eps,-1),-1),-1)
     
-    x_hat = eps_x*x_r + (1-eps_x)*x_f
-    A_hat = eps_A*A_r + (1-eps_A)*A_f
+    x_hat = eps_x*x_r + (1-eps_x)*x_f.detach()
+    A_hat = eps_A*A_r + (1-eps_A)*A_f.detach()
     
     d_hat = netD(A_hat,x_hat)
     
