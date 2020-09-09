@@ -57,11 +57,17 @@ def grad_penalty(A_r,x_r,A_f,x_f,netD):
                               grad_outputs=torch.ones(d_hat.size()),
                               create_graph=True, retain_graph=True, only_inputs=True)[0]
 
-    gradient_penalty = ((gradients.norm(2, dim=(1,2)) ** 2).mean()
+    gradient_penalty_x = ((gradients_x.norm(2, dim=(1,2)) ** 2).mean()
                         
     gradient_a = grad(outputs=d_hat, inputs=A_hat,
                               grad_outputs=torch.ones(d_hat.size()),
                               create_graph=True, retain_graph=True, only_inputs=True)[0]
+    
+    gradient_penalty_a = ((gradients_a.norm(2, dim=(1,2,3)) ** 2).mean()
+                          
+    return gradient_penalty_x+gradient_penalty_a
+                        
+    
                         
      
                         
