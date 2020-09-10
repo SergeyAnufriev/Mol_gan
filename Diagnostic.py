@@ -1,7 +1,7 @@
 import torch
 from torch import autograd
-from numpy import linalg 
 import wandb
+from scipy.sparse import linalg
 
 def grad_info(model,t):
   total_grad = []
