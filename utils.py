@@ -1,5 +1,6 @@
 import torch
 from torch.autograd import grad
+from torch.autograd import Variable
 
 real_label = 1.
 fake_label = 0.
@@ -50,8 +51,8 @@ def grad_penalty(A_r,x_r,A_f,x_f,netD):
     eps_x = torch.unsqueeze(torch.unsqueeze(eps,-1),-1)
     eps_A = torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(eps,-1),-1),-1)
     
-    x_hat = eps_x*x_r + (1-eps_x)*x_f.detach()
-    A_hat = eps_A*A_r + (1-eps_A)*A_f.detach()
+    x_hat = Variable(eps_x*x_r + (1-eps_x)*x_f,requires_grad=True)
+    A_hat = Variable(eps_A*A_r + (1-eps_A)*A_f,requires_grad=True)
     
     d_hat = netD(A_hat,x_hat)
     
