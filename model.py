@@ -5,9 +5,6 @@ from torch_geometric.nn import GlobalAttention
 from torch.nn.parameter import Parameter
 
 
-print('hello sergey')
-
-
 def permute3D(A):
 
   A = A.permute(2,0,1)
