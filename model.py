@@ -4,7 +4,9 @@ from torch.nn.functional import one_hot
 from torch_geometric.nn import GlobalAttention
 from torch.nn.parameter import Parameter
 
-print('hello world')
+
+print('hello sergey')
+
 
 def permute3D(A):
 
