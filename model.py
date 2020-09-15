@@ -162,7 +162,7 @@ class R(torch.nn.Module):
     self.conv2 = Convolve(h_1+in_channels,h_2,4)
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
     self.lin   = nn.Linear(h_3,1,bias=True)
-    self.act_h = nn.Tanh()
+    self.act_h = nn.ReLU()
     self.act   = nn.Sigmoid()
 
    
