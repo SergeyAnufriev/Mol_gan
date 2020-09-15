@@ -163,7 +163,7 @@ class R(torch.nn.Module):
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
     self.lin   = nn.Linear(h_3,1,bias=True)
     self.act_h = nn.ReLU()
-    self.act   = nn.Sigmoid()
+    self.act   = nn.ReLU()
 
    
   def forward(self,A,x):
