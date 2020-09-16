@@ -94,10 +94,12 @@ class Generator(nn.Module):
   
 ################## CONVOLUTION RELATIONAL GCN OPERATOR ###############################
 
+
+
 class Convolve(nn.Module):
     def __init__(self,in_channels,out_channels,n_relations):
       super(Convolve,self).__init__()
-      
+
       self.weight     = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels,n_relations), gain=1.0))
       self.theta_root = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels), gain=1.0))
 
@@ -163,14 +165,14 @@ class R(torch.nn.Module):
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
     self.lin   = nn.Linear(h_3,1,bias=True)
     self.act_h = nn.ReLU()
-    self.act   = nn.ReLU()
+    self.act   = nn.Sigmoid()
 
     
   def forward(self,A,x):
 
-    h_1    = self.act_h(self.conv1(A,x))
-    h_2    = self.act_h(self.conv2(A,torch.cat((h_1,x),-1)))
-    h_G    = self.act_h(self.agr(torch.cat((h_2,x),-1)))
+    h_1    = self.act_h(self.conv1.forward(A,x))
+    h_2    = self.act_h(self.conv2.forward(A,torch.cat((h_1,x),-1)))
+    h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
     scalar = self.act_h(self.lin(h_G))
 
     return self.act(scalar)
