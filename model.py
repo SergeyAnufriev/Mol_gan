@@ -130,7 +130,7 @@ class nn_(torch.nn.Module):
   def __init__(self,in_channels,out_channels):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels,bias= True)
-    self.act  = nn.Tanh()
+    self.act  = nn.ReLU()
 
   def forward(self,x):
     return self.act(self.lin2(x))
@@ -165,7 +165,7 @@ class R(torch.nn.Module):
     self.act_h = nn.ReLU()
     self.act   = nn.ReLU()
 
-   
+    
   def forward(self,A,x):
 
     h_1    = self.act_h(self.conv1(A,x))
