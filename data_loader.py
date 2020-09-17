@@ -106,22 +106,39 @@ class Mol_dataset(Dataset,MolecularMetrics):
         adjecency_mat[end,start,:] = Mol_dataset.bond_features(bond)
     return torch.cat([adjecency_mat,torch.zeros((self.N,self.N,1))],dim=-1)
 
+  @staticmethod
+  def reward(mol):
+
+    LogP_ = Mol_dataset.water_octanol_partition_coefficient_scores([mol],norm=True)
+    QED_  = Mol_dataset.quantitative_estimation_druglikeness_scores([mol],norm=True)
+    SAS_  = Mol_dataset.synthetic_accessibility_score_scores([mol],norm=True)
+
+    return LogP_*QED_*SAS_.astype('float32')
+
+
   def __getitem__(self,idx):
     if torch.is_tensor(idx):
       idx = idx.tolist() 
 
     mol = self.suppl[idx]
+    r   = None
+
+    while mol is None and r is None:
+      if mol is None:
+        idx+=1
+        mol  = self.suppl[idx]
+      else:
+        r = Mol_dataset.reward(mol)
+        if r == 0:
+          idx+=1
+          mol  = self.suppl[idx]
+
+    #while mol is None:
+    #  idx +=1
+    #  mol  = self.suppl[idx]
+
+
+
     
-    while mol is None:
-      idx +=1
-      mol  = self.suppl[idx]
-
-
-    LogP_ = Mol_dataset.water_octanol_partition_coefficient_scores([mol],norm=True) 
-    QED_  = Mol_dataset.quantitative_estimation_druglikeness_scores([mol],norm=True)
-    SAS_  = Mol_dataset.synthetic_accessibility_score_scores([mol],norm=True)
-
-    reward  = LogP_*QED_*SAS_.astype('float32') 
-    
-    return self.adj_mat(mol), self.atom_features(mol), LogP_ ,QED_, SAS_, reward
+    return self.adj_mat(mol), self.atom_features(mol), r
 
