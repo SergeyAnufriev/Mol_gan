@@ -122,13 +122,28 @@ class Mol_dataset(Dataset,MolecularMetrics):
   def __getitem__(self,idx):
     if torch.is_tensor(idx):
       idx = idx.tolist()
-
     mol = self.suppl[idx]
-    r   = Mol_dataset.reward(mol)
+    if mol is None:
+      return None,None,None
+    else:
+      r = Mol_dataset.reward(mol)
+      if r == 0:
+        return None,None,None
+      else:
+        return self.adj_mat(mol), self.atom_features(mol), r
 
-    while mol is None or r == 0:
-      mol = self.suppl[idx]
-      r   = Mol_dataset.reward(mol)
-      idx+=1
 
-    return self.adj_mat(mol), self.atom_features(mol), r
+
+def func(dataset):
+    def my_collate(batch):
+        len_batch = len(batch)
+        batch = [[x,y,z] for x,y,z in batch if x is not None]
+        diff = len_batch - len(batch)
+        while diff>0:
+          i = np.random.randint(0, len(dataset))
+          x,y,z = dataset[i]
+          if x is not None:
+            batch.append([x,y,z])
+            diff+=-1
+        return torch.utils.data.dataloader.default_collate(batch)
+    return my_collate
