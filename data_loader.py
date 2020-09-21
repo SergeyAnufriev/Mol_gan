@@ -121,24 +121,13 @@ class Mol_dataset(Dataset,MolecularMetrics):
       idx = idx.tolist() 
 
     mol = self.suppl[idx]
-    r   = None
 
-    while mol is None and r is None:
+    while mol is None:
       if mol is None:
         idx+=1
         mol  = self.suppl[idx]
-      else:
-        r = Mol_dataset.reward(mol)
-        if r == 0:
-          idx+=1
-          mol  = self.suppl[idx]
 
-    #while mol is None:
-    #  idx +=1
-    #  mol  = self.suppl[idx]
+    r = Mol_dataset.reward(mol)
 
-
-
-    
     return self.adj_mat(mol), self.atom_features(mol), r
 
