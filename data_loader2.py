@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 import numpy as np
 from rdkit.Chem import RWMol
 from torch.nn.functional import one_hot
+import numpy as np
 
 
 class Mol_dataset(Dataset,MolecularMetrics):
@@ -130,7 +131,7 @@ class Mol_dataset(Dataset,MolecularMetrics):
       if r == 0:
         return None,None,None
       else:
-        return self.adj_mat(mol), self.atom_features(mol), r
+        return self.adj_mat(mol), self.atom_features(mol), -np.log(r)
 
 
 
