@@ -12,7 +12,7 @@ def grad_info(model,t):
     total_grad +=grad 
   wandb.log({t+'L2':np.linalg.norm(total_grad)})
 
-class JacobianVectorProduct(linalg.LinearOperator):
+class Jacobian_T_VectorProduct(linalg.LinearOperator):
     def __init__(self, grad, params):
         if isinstance(grad, (list, tuple)):
             grad = list(grad)
