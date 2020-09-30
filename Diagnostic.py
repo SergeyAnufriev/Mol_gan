@@ -11,6 +11,38 @@ def grad_info(model,t):
     wandb.log({t+name: wandb.Histogram(grad)})
     total_grad +=grad 
   wandb.log({t+'L2':np.linalg.norm(total_grad)})
+  
+  
+class Jacobian(linalg.LinearOperator):
+  def __init__(self,first_grad,params,transpose=True):
+
+    self.first_grad = first_grad
+    self.params     = params
+    self.transpose  = transpose
+  
+  @staticmethod
+  def vectorize(x):
+    return torch.cat([torch.flatten(y) for y in x]).unsqueeze(-1)
+  
+  def JVP(self,v):
+    # operator J(first_grad,params)v --> Hessian(params)v
+    dF   = Jacobian.vectorize(self.first_grad).unsqueeze(-1) 
+    u    = torch.ones_like(dF,requires_grad=True)       
+    g_v  = grad(dF,self.params,u,create_graph=True,retain_graph=True)
+    g_v  = Jacobian.vectorize(g_v)
+    ans, = grad(g_v,u,v)
+    return ans.T
+
+  def JTVP(self,v):
+    # operator J^T(first_grad,params)v --> Hessian^T(params)v
+    return grad(self.first_grad,self.params,v)
+
+  def _matvec(self,v):
+    v = torch.tensor(v)
+    if self.transpose == True:
+      return self.JVP(v).detach().numpy()
+    else:
+      return self.JTVP(v).detach().numpy()
 
 class Jacobian_T_VectorProduct(linalg.LinearOperator):
     def __init__(self, grad, params):
