@@ -14,7 +14,7 @@ def grad_info(model,t):
   
   
 class Jacobian(linalg.LinearOperator):
-  def __init__(self,first_grad,params,transpose=True):
+  def __init__(self,first_grad,params,transpose=False):
 
     self.first_grad = first_grad
     self.params     = params
@@ -26,50 +26,23 @@ class Jacobian(linalg.LinearOperator):
   
   def JVP(self,v):
     # operator J(first_grad,params)v --> Hessian(params)v
-    dF   = Jacobian.vectorize(self.first_grad).unsqueeze(-1) 
+    dF   = Jacobian.vectorize(self.first_grad)
     u    = torch.ones_like(dF,requires_grad=True)       
     g_v  = grad(dF,self.params,u,create_graph=True,retain_graph=True)
     g_v  = Jacobian.vectorize(g_v)
     ans, = grad(g_v,u,v)
-    return ans.T
+    return ans
 
   def JTVP(self,v):
     # operator J^T(first_grad,params)v --> Hessian^T(params)v
-    return grad(self.first_grad,self.params,v)
+    return Jacobian.vectorize(grad(Jacobian.vectorize(self.first_grad),self.params,v,retain_graph=True))
 
   def _matvec(self,v):
     v = torch.tensor(v)
     if self.transpose == True:
-      return self.JVP(v).detach().numpy()
-    else:
       return self.JTVP(v).detach().numpy()
-
-class Jacobian_T_VectorProduct(linalg.LinearOperator):
-    def __init__(self, grad, params):
-        if isinstance(grad, (list, tuple)):
-            grad = list(grad)
-            for i, g in enumerate(grad):
-                grad[i] = g.view(-1)
-            self.grad = torch.cat(grad)
-        elif isinstance(grad, torch.Tensor):
-            self.grad = grad.view(-1)
-        self.shape = (self.grad.size(0), self.grad.size(0))
-        self.dtype = np.dtype('Float32')
-        self.params = params
-
-    def _matvec(self, v):
-        v = torch.Tensor(v)
-        if self.grad.is_cuda:
-            v = v.cuda()
-        grad_vector_product = torch.dot(self.grad, v)
-        hv = autograd.grad(grad_vector_product, self.params, retain_graph=True, allow_unused=True)
-        _hv = []
-        for g, p in zip(hv, self.params):
-            if g is None:
-                g = torch.zeros_like(p)
-            _hv.append(g.contiguous().view(-1))
-        hv = torch.cat(_hv)
-        return hv.cpu()
+    else:
+      return self.JVP(v).detach().numpy()
       
 def vis(G,D):
   with torch.no_grad():
