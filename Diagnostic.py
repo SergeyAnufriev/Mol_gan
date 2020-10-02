@@ -15,7 +15,17 @@ def grad_info(model,t):
     total_grad +=grad 
   wandb.log({t+'L2':np.linalg.norm(total_grad)})
   
-
+  
+def get_n_params(model):
+    pp=0
+    for p in list(model.parameters()):
+        nn=1
+        for s in list(p.size()):
+            nn = nn*s
+        pp += nn
+    return pp
+  
+  
 class Gradient:
   def __init__(self,D,G,L1,L2,z_dim,data=None,dataloader=None):
     
