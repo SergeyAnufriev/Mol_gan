@@ -3,6 +3,9 @@ from torch import autograd
 import wandb
 from scipy.sparse import linalg
 import numpy as np
+from torch.autograd import grad
+from copy import deepcopy
+
 
 def grad_info(model,t):
   total_grad = []
