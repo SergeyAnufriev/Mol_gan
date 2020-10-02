@@ -12,6 +12,90 @@ def grad_info(model,t):
     total_grad +=grad 
   wandb.log({t+'L2':np.linalg.norm(total_grad)})
   
+
+class Gradient:
+  def __init__(self,D,G,L1,L2,z_dim,data=None,dataloader=None):
+    
+    if data != None:
+      self.data = data
+      self.full_dataset = False
+    else:
+      self.data = dataloader
+      self.full_dataset = True
+
+    if not self.full_dataset:
+      self.data = data
+
+    self.D =  deepcopy(D)
+    self.G =  deepcopy(G)
+
+    self.L_D = L1
+    self.L_G = L2
+
+    self.z_dim = z_dim
+
+    self.theta = list(self.D.parameters())
+    self.phi   = list(self.G.parameters())
+
+  def first_diff(self):
+    if self.full_dataset == False:
+
+      bz = len(self.data)
+      z  = torch.rand((bz,self.z_dim)).float()
+      x  = self.data.float()
+
+      x_fake1 = self.G(z)
+      #x_fake2 = x_fake1.detach().requires_grad_()
+      
+      grad_D = grad(self.L_D(x_fake1,x,self.D),\
+                    self.theta,create_graph=True,retain_graph=True)
+      grad_G = grad(self.L_G(x_fake1,self.D),
+                    self.phi,create_graph=True,retain_graph=True)
+
+    else:
+
+      grad_dis_epoch ={}
+      grad_gen_epoch ={}
+      n_data = 0
+
+      for name, param in self.D.named_parameters():
+        grad_dis_epoch[name] = torch.zeros_like(param).flatten()
+
+      for name, param in self.G.named_parameters():
+        grad_gen_epoch[name] = torch.zeros_like(param).flatten()
+
+      for x_real in self.data:
+
+        bz = len(x_real)
+        z  = torch.rand((bz,self.z_dim)).float()
+        x_fake1 = self.G(z).float()
+        #x_fake2 = x_fake1.detach().requires_grad_()
+      
+        dL1dtheta = grad(self.L_D(x_real.float(),self.G(z).float(),self.D),\
+                        self.theta,create_graph=True,retain_graph=True)
+
+        for ((name,_),g) in zip(self.D.named_parameters(),dL1dtheta):
+            grad_dis_epoch[name]+=g.flatten()*len(x_real)
+
+        dL2dphi   = grad(self.L_G(x_fake1,self.D),\
+                         self.phi,create_graph=True,retain_graph=True)
+        
+        for ((name,_),g) in zip(self.G.named_parameters(),dL2dphi):
+            grad_gen_epoch[name]+=g.flatten()*len(x_real)
+
+        n_data +=len(x_real)
+
+      grad_D = []
+      grad_G = []
+
+      for name,_ in self.D.named_parameters():
+        grad_D.append(grad_dis_epoch[name]/n_data)
+
+      for name,_ in self.G.named_parameters():
+        grad_G.append(grad_gen_epoch[name]/n_data)
+
+    return grad_D, self.theta, grad_G, self.phi
+  
   
 class Jacobian(linalg.LinearOperator):
   def __init__(self,first_grad,params,transpose=False):
