@@ -27,7 +27,7 @@ def get_n_params(model):
   
   
 class Gradient:
-  def __init__(self,D,G,L1,L2,z_dim,data=None,dataloader=None):
+  def __init__(self,D,G,L1,L2,z_dim,device,data=None,dataloader=None):
     
     if data != None:
       self.data = data
@@ -39,9 +39,11 @@ class Gradient:
     if not self.full_dataset:
       self.data = data
 
-    self.D =  deepcopy(D)
-    self.G =  deepcopy(G)
+    self.device = device 
 
+    self.D =  deepcopy(D).to(self.device)
+    self.G =  deepcopy(G).to(self.device)
+    
     self.L_D = L1
     self.L_G = L2
 
@@ -54,15 +56,15 @@ class Gradient:
     if self.full_dataset == False:
 
       bz = len(self.data)
-      z  = torch.rand((bz,self.z_dim)).float()
-      x  = self.data.float()
+      z  = torch.rand((bz,self.z_dim),device=self.device).float()
+      x  = self.data.float().to(self.device)
 
       x_fake1 = self.G(z)
       #x_fake2 = x_fake1.detach().requires_grad_()
       
-      grad_D = grad(self.L_D(x_fake1,x,self.D),\
+      grad_D = grad(self.L_D(x_fake1,x,self.D,self.device),\
                     self.theta,create_graph=True,retain_graph=True)
-      grad_G = grad(self.L_G(x_fake1,self.D),
+      grad_G = grad(self.L_G(x_fake1,self.D,self.device),
                     self.phi,create_graph=True,retain_graph=True)
 
     else:
@@ -72,25 +74,26 @@ class Gradient:
       n_data = 0
 
       for name, param in self.D.named_parameters():
-        grad_dis_epoch[name] = torch.zeros_like(param).flatten()
+        grad_dis_epoch[name] = torch.zeros_like(param,device=self.device).flatten()
 
       for name, param in self.G.named_parameters():
-        grad_gen_epoch[name] = torch.zeros_like(param).flatten()
+        grad_gen_epoch[name] = torch.zeros_like(param,device=self.device).flatten()
 
       for x_real in self.data:
 
         bz = len(x_real)
-        z  = torch.rand((bz,self.z_dim)).float()
+        z  = torch.rand((bz,self.z_dim),device=self.device).float()
         x_fake1 = self.G(z).float()
         #x_fake2 = x_fake1.detach().requires_grad_()
+        x_real = x_real.to(self.device)
       
-        dL1dtheta = grad(self.L_D(x_real.float(),self.G(z).float(),self.D),\
+        dL1dtheta = grad(self.L_D(x_real.float(),self.G(z).float(),self.D,self.device),\
                         self.theta,create_graph=True,retain_graph=True)
 
         for ((name,_),g) in zip(self.D.named_parameters(),dL1dtheta):
             grad_dis_epoch[name]+=g.flatten()*len(x_real)
 
-        dL2dphi   = grad(self.L_G(x_fake1,self.D),\
+        dL2dphi   = grad(self.L_G(x_fake1,self.D,self.device),\
                          self.phi,create_graph=True,retain_graph=True)
         
         for ((name,_),g) in zip(self.G.named_parameters(),dL2dphi):
