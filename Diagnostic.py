@@ -112,13 +112,14 @@ class Gradient:
 
     return grad_D, self.theta, grad_G, self.phi
   
-  
+ 
 class Jacobian(linalg.LinearOperator):
-  def __init__(self,first_grad,params,transpose=False):
+  def __init__(self,first_grad,params,device,transpose=False):
 
     self.first_grad = first_grad
     self.params     = params
     self.transpose  = transpose
+    self.device     = device 
   
   @staticmethod
   def vectorize(x):
@@ -143,6 +144,16 @@ class Jacobian(linalg.LinearOperator):
       return self.JTVP(v).detach().numpy()
     else:
       return self.JVP(v).detach().numpy()
+
+  def trace(self,n_iter): ### n_iter for Hutchinson Stochastic Trace Estimators
+    trace_list = []
+    for _ in range(n_iter):
+      v = torch.cat([torch.randint_like(p.data, high=2,device=self.device).flatten()\
+          for p in self.params if p.requires_grad == True]).unsqueeze(-1)
+      v[v==0.]=-1. ### sample from Rademacher distribution
+      trace_list.append(torch.matmul(v.T,self.JTVP(v)))
+    return torch.mean(torch.tensor(trace_list))
+
       
 def vis(G,D):
   with torch.no_grad():
