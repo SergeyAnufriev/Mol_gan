@@ -120,6 +120,12 @@ class Jacobian(linalg.LinearOperator):
     self.params     = params
     self.transpose  = transpose
     self.device     = device 
+    
+    n_params = 0
+    for p in self.params:
+      n_params+=p.numel()
+
+    self.shape = (n_params,n_params)
   
   @staticmethod
   def vectorize(x):
