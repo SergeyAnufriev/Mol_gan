@@ -139,7 +139,7 @@ class Jacobian(linalg.LinearOperator):
     return Jacobian.vectorize(grad(Jacobian.vectorize(self.first_grad),self.params,v,retain_graph=True))
 
   def _matvec(self,v):
-    v = torch.tensor(v)
+    v = torch.tensor(v,device=self.device)
     if self.transpose == True:
       return self.JTVP(v).detach().numpy().float()
     else:
