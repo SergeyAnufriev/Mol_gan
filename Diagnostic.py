@@ -141,9 +141,9 @@ class Jacobian(linalg.LinearOperator):
   def _matvec(self,v):
     v = torch.tensor(v,device=self.device)
     if self.transpose == True:
-      return self.JTVP(v).cpu().detach().numpy().float()
+      return self.JTVP(v).cpu().detach().numpy()
     else:
-      return self.JVP(v).cpu().detach().numpy().float()
+      return self.JVP(v).cpu().detach().numpy()
 
   def trace(self,n_iter): ### n_iter for Hutchinson Stochastic Trace Estimators
     trace_list = []
