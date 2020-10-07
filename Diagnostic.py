@@ -5,6 +5,7 @@ from scipy.sparse import linalg
 import numpy as np
 from torch.autograd import grad
 from copy import deepcopy
+from scipy.sparse.linalg import eigs,eigsh
 
 
 def grad_info(model,t):
@@ -145,6 +146,7 @@ class Jacobian(linalg.LinearOperator):
     return Jacobian.vectorize(grad(Jacobian.vectorize(self.first_grad),self.params,v,retain_graph=True))
 
   def _matvec(self,v):
+    v = np.expand_dims(v,axis=-1)
     v = torch.tensor(v,device=self.device)
     if self.transpose == True:
       return self.JTVP(v).cpu().detach().numpy()
@@ -159,6 +161,21 @@ class Jacobian(linalg.LinearOperator):
       v[v==0.]=-1. ### sample from Rademacher distribution
       trace_list.append(torch.matmul(v.T,self.JTVP(v)))
     return torch.mean(torch.tensor(trace_list))
+  
+  def eigen_pair(self,n_eigen,which):  #### returns [eig_val, eig_vec]
+    
+    #### WHICH ################
+    #‘LM’ : largest magnitude
+    #‘SM’ : smallest magnitude
+    #‘LR’ : largest real part
+    #‘SR’ : smallest real part
+    #‘LI’ : largest imaginary part
+    #‘SI’ : smallest imaginary part
+    
+    if self.transpose == True:
+      return eigsh(self,which = which,k=n_eigen)
+    else:
+      return eigs(self,which = which,k=n_eigen)
 
       
 def vis(G,D):
