@@ -121,6 +121,7 @@ class Jacobian(linalg.LinearOperator):
     self.params     = params
     self.transpose  = transpose
     self.device     = device 
+    self.dtype      = np.dtype('Float32')
     
     n_params = 0
     for p in self.params:
