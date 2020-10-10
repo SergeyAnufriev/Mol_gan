@@ -177,6 +177,57 @@ class Jacobian(linalg.LinearOperator):
       return eigsh(self,which = which,k=n_eigen)
     else:
       return eigs(self,which = which,k=n_eigen)
+    
+
+def ort(w,list1):
+  for v in list1:
+    w = w - torch.matmul(w.T,v)*v
+    w = w/torch.norm(w)
+  return w
+
+
+def density(J,n_iter):
+
+  v       = rand_vec(J)
+  w_prime = J.JTVP(v)
+  alpha   = torch.matmul(w_prime.T,v)
+  w       = w_prime - alpha*v  ## projection of w_prime on v
+  v_list      = [v]
+  w_list      = [w]
+  alpha_list  = [alpha]
+  beta_list   = []
+
+  V = torch.zeros((J.shape[0],n_iter))
+  T = torch.zeros((n_iter,n_iter))
+  T[0,0] = alpha
+  V[:,0] = v.squeeze(-1)
+
+  for i in range(n_iter-1):
+
+    betta = torch.norm(w_list[-1])
+    beta_list.append(betta)
+
+    T[i,i+1] = betta
+    T[i+1,i] = betta
+
+    if betta !=0:
+      v = w_list[-1]/betta
+      v = ort(v,v_list)
+    else:
+      v = ort(rand_vec(J),v_list)
+
+    v_list.append(v)
+    V[:,i+1] = v.squeeze(-1)
+
+    w_prime = J.JTVP(v_list[-1])
+    alpha = torch.matmul(w_prime.T,v_list[-1])
+    alpha_list.append(alpha)
+    T[i+1,i+1] = alpha
+
+    w = w_prime-alpha_list[-1]*v_list[-1]-beta_list[-1]*v_list[-2]
+    w_list.append(w)
+
+  return V, T
 
       
 def vis(G,D):
