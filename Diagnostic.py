@@ -113,7 +113,8 @@ class Gradient:
 
     return grad_D, self.theta, grad_G, self.phi
   
- 
+  
+  
 class Jacobian(linalg.LinearOperator):
   def __init__(self,first_grad,params,device,transpose=False):
 
@@ -157,9 +158,7 @@ class Jacobian(linalg.LinearOperator):
   def trace(self,n_iter): ### n_iter for Hutchinson Stochastic Trace Estimators
     trace_list = []
     for _ in range(n_iter):
-      v = torch.cat([torch.randint_like(p.data, high=2,device=self.device).flatten()\
-          for p in self.params if p.requires_grad == True]).unsqueeze(-1)
-      v[v==0.]=-1. ### sample from Rademacher distribution
+      v = self.rand_vec()
       trace_list.append(torch.matmul(v.T,self.JTVP(v)))
     return torch.mean(torch.tensor(trace_list))
   
@@ -177,59 +176,64 @@ class Jacobian(linalg.LinearOperator):
       return eigsh(self,which = which,k=n_eigen)
     else:
       return eigs(self,which = which,k=n_eigen)
-    
 
-def ort(w,list1):
-  for v in list1:
-    w = w - torch.matmul(w.T,v)*v
-    w = w/torch.norm(w)
-  return w
+  def rand_vec(self):### sample from Rademacher distribution
+    v = torch.cat([torch.randint_like(p.data, high=2,device=self.device).flatten()\
+          for p in self.params]).unsqueeze(-1)
+    v[v==0.]=-1. 
+    return v/np.sqrt(len(v))
+  
+  @staticmethod ### Orthogonilise: Gram-Schmidt process 
+  def ort(w,list1):
+    for v in list1:
+      w = w - torch.matmul(w.T,v)*v
+      w = w/torch.norm(w)
+    return w
+
+  def lanczos(self,n_iter):  ### Returns V basis and T tridiagonal matrix
+                              
+    v       = self.rand_vec()
+    w_prime = self.JTVP(v)
+    alpha   = torch.matmul(w_prime.T,v)
+    w       = w_prime - alpha*v  ## projection of w_prime on v
+    v_list      = [v]
+    w_list      = [w]
+    alpha_list  = [alpha]
+    beta_list   = []
+
+    V = torch.zeros((self.shape[0],n_iter))
+    T = torch.zeros((n_iter,n_iter))
+    T[0,0] = alpha
+    V[:,0] = v.squeeze(-1)
+
+    for i in range(n_iter-1):
+
+      betta = torch.norm(w_list[-1])
+      beta_list.append(betta)
+
+      T[i,i+1] = betta
+      T[i+1,i] = betta
+
+      if betta !=0:
+        v = w_list[-1]/betta
+        v = Jacobian.ort(v,v_list)
+      else:
+        v = Jacobian.ort(self.rand_vec(),v_list)
+
+      v_list.append(v)
+      V[:,i+1] = v.squeeze(-1)
+
+      w_prime = self.JTVP(v_list[-1])
+      alpha = torch.matmul(w_prime.T,v_list[-1])
+      alpha_list.append(alpha)
+      T[i+1,i+1] = alpha
+
+      w = w_prime-alpha_list[-1]*v_list[-1]-beta_list[-1]*v_list[-2]
+      w_list.append(w)
+    return V, T
+  
 
 
-def density(J,n_iter):
-
-  v       = rand_vec(J)
-  w_prime = J.JTVP(v)
-  alpha   = torch.matmul(w_prime.T,v)
-  w       = w_prime - alpha*v  ## projection of w_prime on v
-  v_list      = [v]
-  w_list      = [w]
-  alpha_list  = [alpha]
-  beta_list   = []
-
-  V = torch.zeros((J.shape[0],n_iter))
-  T = torch.zeros((n_iter,n_iter))
-  T[0,0] = alpha
-  V[:,0] = v.squeeze(-1)
-
-  for i in range(n_iter-1):
-
-    betta = torch.norm(w_list[-1])
-    beta_list.append(betta)
-
-    T[i,i+1] = betta
-    T[i+1,i] = betta
-
-    if betta !=0:
-      v = w_list[-1]/betta
-      v = ort(v,v_list)
-    else:
-      v = ort(rand_vec(J),v_list)
-
-    v_list.append(v)
-    V[:,i+1] = v.squeeze(-1)
-
-    w_prime = J.JTVP(v_list[-1])
-    alpha = torch.matmul(w_prime.T,v_list[-1])
-    alpha_list.append(alpha)
-    T[i+1,i+1] = alpha
-
-    w = w_prime-alpha_list[-1]*v_list[-1]-beta_list[-1]*v_list[-2]
-    w_list.append(w)
-
-  return V, T
-
-      
 def vis(G,D):
   with torch.no_grad():
 
