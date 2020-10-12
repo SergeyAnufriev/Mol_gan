@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from torch import eig
 
 
-def get_esd_plot(T):
+def get_esd_plot2(T):
     
     vals = eig(T,eigenvectors=True)
     
