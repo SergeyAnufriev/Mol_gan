@@ -23,10 +23,18 @@ import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+from torch import eig
 
 
-def get_esd_plot(eigenvalues, weights):
+def get_esd_plot(T):
+    
+    vals = eig(T,eigenvectors=True)
+    
+    eigenvalues    = [vals.eigenvalues[:,0].cpu().detach().numpy()]
+    weights        = [(vals.eigenvectors[0,:]**2).cpu().detach().numpy()]
+
     density, grids = density_generate(eigenvalues, weights)
+   
     plt.semilogy(grids, density + 1.0e-7)
     plt.ylabel('Density (Log Scale)', fontsize=14, labelpad=10)
     plt.xlabel('Eigenvlaue', fontsize=14, labelpad=10)
