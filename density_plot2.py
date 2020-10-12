@@ -43,6 +43,7 @@ def get_esd_plot2(T):
     plt.axis([np.min(eigenvalues) - 1, np.max(eigenvalues) + 1, None, None])
     plt.tight_layout()
     plt.savefig('example.pdf')
+    plt.show()
 
 
 def density_generate(eigenvalues,
