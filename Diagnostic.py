@@ -26,6 +26,20 @@ def get_n_params(model):
         pp += nn
     return pp
   
+def model_params_shift(model,vec,lambd):
+  
+  # shift model params along vec by const lambd
+  #model: pytorch module
+  #vec  : np.array
+  #lambda : scalar in [0,1]
+
+  s = 0
+  for p in model.parameters():
+    p.data += lambd*torch.tensor(vec[s:s+p.numel()],device=p.device).view(p.size())
+    s+= p.numel()
+
+  return model.cuda() # model with shifted parameters
+  
   
 class Gradient:
   def __init__(self,D,G,L1,L2,z_dim,device,data=None,dataloader=None):
