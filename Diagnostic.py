@@ -41,6 +41,15 @@ def model_params_shift(model,vec,lambd):
     s+= p.numel()
 
   return model.cuda() # model with shifted parameters
+
+def curvature(model,vec,lams):
+  losses = []
+  for lambd in lams:
+    m = model_params_shift(model,vec,lambd)
+    loss  = criterion(m(inputs),targets)
+    losses.append(loss.cpu().detach().numpy())
+  
+  plt.plot(lams, losses)
   
   
 class Gradient:
