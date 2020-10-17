@@ -32,6 +32,8 @@ def model_params_shift(model,vec,lambd):
   #model: pytorch module
   #vec  : np.array
   #lambda : scalar in [0,1]
+  
+  model = deepcopy(model)
 
   s = 0
   for p in model.parameters():
