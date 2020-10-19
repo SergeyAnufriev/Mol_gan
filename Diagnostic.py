@@ -6,6 +6,8 @@ import numpy as np
 from torch.autograd import grad
 from copy import deepcopy
 from scipy.sparse.linalg import eigs,eigsh
+import plotly.graph_objects as go
+
 
 
 def grad_info(model,t):
