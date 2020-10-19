@@ -264,7 +264,7 @@ class Jacobian(linalg.LinearOperator):
   
 
 
-def vis(G,D):
+def vis(G,D,X_train_save,z_fixed):
   with torch.no_grad():
 
     fig = go.Figure()
