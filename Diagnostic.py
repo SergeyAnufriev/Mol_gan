@@ -9,12 +9,11 @@ from scipy.sparse.linalg import eigs,eigsh
 import plotly.graph_objects as go
 
 
-
 def grad_info(model,t):
   total_grad = []
   for name, param in model.named_parameters():
     
-    grad = list(torch.flatten(param.grad).numpy())
+    grad = list(torch.flatten(param.grad).cpu().detach().numpy())
     wandb.log({t+name: wandb.Histogram(grad)})
     total_grad +=grad 
     
