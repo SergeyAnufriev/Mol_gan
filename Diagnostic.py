@@ -262,7 +262,12 @@ class Jacobian(linalg.LinearOperator):
       w_list.append(w)
     return V, T
   
-
+def min_max(X): #X 2D array
+  x1_gen = X[:,0]
+  x2_gen = X[:,1]
+  return np.min(x1_gen),np.max(x2_gen),\
+         np.min(x2_gen),np.max(x2_gen)
+  
 
 def vis(G,D,X_train_save,z_fixed):
   with torch.no_grad():
