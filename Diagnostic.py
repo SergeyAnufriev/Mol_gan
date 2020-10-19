@@ -268,7 +268,7 @@ def min_max(X): #X 2D array
          np.min(x2_gen),np.max(x2_gen)
   
 
-def vis(G,D,X_train_save,z_fixed):
+def vis(G,D,X_train_save,z_fixed,device):
   with torch.no_grad():
 
     fig = go.Figure()
@@ -286,7 +286,7 @@ def vis(G,D,X_train_save,z_fixed):
     vals = np.hstack([u.reshape(400,1),v.reshape(400,1)])
     
     D.eval()
-    pred = D(torch.tensor(vals).float()).cpu().detach().numpy().reshape(20,20)
+    pred = D(torch.tensor(vals,device=device).float()).cpu().detach().numpy().reshape(20,20)
 
     fig.add_trace(go.Contour(
         z=[list(x) for x in list(pred)],
