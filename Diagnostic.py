@@ -273,8 +273,7 @@ def vis(G,D,X_train_save,z_fixed):
 
     fig = go.Figure()
     G.eval()
-    gen = G(z_fixed)
-    gen = gen.cpu().data.numpy()
+    gen = G(z_fixed).cpu().detach().numpy()
 
     x1_g_min,x1_g_max,x2_g_min,x2_g_max = min_max(gen)
     x1_d_min,x1_d_max,x2_d_min,x2_d_max = min_max(X_train_save)
@@ -287,7 +286,7 @@ def vis(G,D,X_train_save,z_fixed):
     vals = np.hstack([u.reshape(400,1),v.reshape(400,1)])
     
     D.eval()
-    pred = D(torch.tensor(vals).float()).detach().numpy().reshape(20,20)
+    pred = D(torch.tensor(vals).float()).cpu().detach().numpy().reshape(20,20)
 
     fig.add_trace(go.Contour(
         z=[list(x) for x in list(pred)],
