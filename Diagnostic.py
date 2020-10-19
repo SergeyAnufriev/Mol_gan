@@ -11,10 +11,13 @@ from scipy.sparse.linalg import eigs,eigsh
 def grad_info(model,t):
   total_grad = []
   for name, param in model.named_parameters():
+    
     grad = list(torch.flatten(param.grad).numpy())
     wandb.log({t+name: wandb.Histogram(grad)})
     total_grad +=grad 
-  wandb.log({t+'L2':np.linalg.norm(total_grad)})
+    
+  return np.linalg.norm(total_grad)
+  
   
   
 def get_n_params(model):
@@ -88,7 +91,7 @@ class Gradient:
       x_fake1 = self.G(z)
       #x_fake2 = x_fake1.detach().requires_grad_()
       
-      grad_D = grad(self.L_D(x_fake1,x,self.D,self.device),\
+      grad_D = grad(sum(self.L_D(x_fake1,x,self.D,self.device)),\
                     self.theta,create_graph=True,retain_graph=True)
       grad_G = grad(self.L_G(x_fake1,self.D,self.device),
                     self.phi,create_graph=True,retain_graph=True)
@@ -113,7 +116,7 @@ class Gradient:
         #x_fake2 = x_fake1.detach().requires_grad_()
         x_real = x_real.to(self.device)
       
-        dL1dtheta = grad(self.L_D(x_real.float(),self.G(z).float(),self.D,self.device),\
+        dL1dtheta = grad(sum(self.L_D(x_real.float(),self.G(z).float(),self.D,self.device)),\
                         self.theta,create_graph=True,retain_graph=True)
 
         for ((name,_),g) in zip(self.D.named_parameters(),dL1dtheta):
