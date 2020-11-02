@@ -165,7 +165,7 @@ class R(torch.nn.Module):
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
     self.lin   = nn.Linear(h_3,1,bias=True)
     self.act_h = nn.LeakyReLU()
-    self.act   = nn.LeakyReLU()
+    
 
     
   def forward(self,A,x):
@@ -175,5 +175,5 @@ class R(torch.nn.Module):
     h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
     scalar = self.act_h(self.lin(h_G))
 
-    return self.act(scalar)
+    return scalar
 
