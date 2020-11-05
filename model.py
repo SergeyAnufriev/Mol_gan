@@ -166,6 +166,7 @@ class R(torch.nn.Module):
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
     self.lin   = nn.Linear(h_3,1,bias=True)
     self.act_h = nn.Tanh()
+    self.act_out = nn.Sigmoid()
     
 
     
@@ -174,7 +175,7 @@ class R(torch.nn.Module):
     h_1    = self.act_h(self.conv1.forward(A,x))
     h_2    = self.act_h(self.conv2.forward(A,torch.cat((h_1,x),-1)))
     h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
-    scalar = self.lin(h_G)
+    scalar = self.act_out(self.lin(h_G))
 
     return scalar
 
