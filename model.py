@@ -121,10 +121,10 @@ class gate_nn(torch.nn.Module):
   def __init__(self,in_channels):
     super(gate_nn,self).__init__()
     self.lin1 = nn.Linear(in_channels,1,bias=True)
-    self.act  = nn.Tanh()
+    self.act  = nn.Sigmoid() 
 
   def forward(self,x):
-    return self.lin1(x)
+    return self.act(self.lin1(x))
 
 
 ###### nn_ transforms nodes features ##########################
@@ -133,7 +133,7 @@ class nn_(torch.nn.Module):
   def __init__(self,in_channels,out_channels):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels,bias= True)
-    self.act  = nn.Tanh()
+    self.act  = nn.ReLU()
 
   def forward(self,x):
     return self.act(self.lin2(x))
