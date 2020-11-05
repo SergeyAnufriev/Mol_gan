@@ -133,7 +133,7 @@ class nn_(torch.nn.Module):
   def __init__(self,in_channels,out_channels):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels,bias= True)
-    self.act  = nn.ReLU()
+    self.act  = nn.LeakyReLU()
 
   def forward(self,x):
     return self.act(self.lin2(x))
@@ -165,8 +165,8 @@ class R(torch.nn.Module):
     self.conv2 = Convolve(h_1+in_channels,h_2,4)
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
     self.lin   = nn.Linear(h_3,1,bias=True)
-    self.act_h = nn.Tanh()
-    self.act_out = nn.Sigmoid()
+    self.act_h = nn.LeakyReLU()
+    
     
 
     
@@ -175,7 +175,7 @@ class R(torch.nn.Module):
     h_1    = self.act_h(self.conv1.forward(A,x))
     h_2    = self.act_h(self.conv2.forward(A,torch.cat((h_1,x),-1)))
     h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
-    scalar = self.act_out(self.lin(h_G))
+    scalar = self.lin(h_G)
 
     return scalar
 
