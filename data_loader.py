@@ -6,7 +6,14 @@ import numpy as np
 from rdkit.Chem import RWMol
 from torch.nn.functional import one_hot
 
- 
+
+"""Return a foobang
+
+Docstring test 1 
+
+"""
+
+
 class Mol_dataset(Dataset,MolecularMetrics):
   def __init__(self,sdf_file,atom_set=['C','O','N','F'],N=9):
     self.suppl    = Chem.SDMolSupplier(sdf_file)
@@ -56,6 +63,13 @@ class Mol_dataset(Dataset,MolecularMetrics):
       return [Chem.rdchem.BondType.SINGLE,Chem.rdchem.BondType.DOUBLE,\
             Chem.rdchem.BondType.TRIPLE,Chem.rdchem.BondType.AROMATIC,None][idx]
 
+"""Return a foobang
+
+Docstring test 2
+
+Docstring test 3
+ 
+"""
   
   def A_x_to_mol(self,A,x):
 
