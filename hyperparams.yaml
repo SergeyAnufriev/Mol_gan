@@ -1,1 +1,8 @@
+
+"""Return a foobang
+TO DO 
+Formilise parameters for reward network model
+"""
+
+
 train_batch_size: 120
