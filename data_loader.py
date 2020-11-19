@@ -70,7 +70,7 @@ Docstring test 3
  
 """
   
-def A_x_to_mol(self,A,x):
+ def A_x_to_mol(self,A,x):
 
     mol = RWMol()
     n_atoms = x.size()[0]
@@ -90,7 +90,7 @@ def A_x_to_mol(self,A,x):
     return mol
 
 
-  def atom_features(self,mol):
+ def atom_features(self,mol):
     
     a_list = []
     max_atoms_types = len(self.atom_set)
@@ -111,7 +111,7 @@ def A_x_to_mol(self,A,x):
       N_f_mat = torch.cat([N_f_mat,pad],dim=0)
     return N_f_mat
 
-  def adj_mat(self,mol):
+ def adj_mat(self,mol):
     adjecency_mat = torch.zeros((self.N,self.N,4))
     for bond in mol.GetBonds():
         start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
