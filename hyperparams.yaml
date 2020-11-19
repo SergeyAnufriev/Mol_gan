@@ -1,9 +1,4 @@
 
-"""Return a foobang
-TO DO 
-Formilise parameters for reward network model
-"""
-
 program: train.py
 method: grid
 metric:
