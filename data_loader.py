@@ -43,7 +43,7 @@ class Mol_dataset(Dataset,MolecularMetrics):
     max_atoms = len(self.atom_set)
     idx  = np.dot(x.numpy(),np.array(range(0,max_atoms+1))).astype(int)
     if idx == max_atoms:
-      return None
+      return 0
     else:
 
       atom = Chem.rdchem.Atom(self.atom_set[idx])
@@ -54,43 +54,34 @@ class Mol_dataset(Dataset,MolecularMetrics):
 
     if torch.sum(x).numpy() == 0:
       return None
-
     else:
-
       idx = np.dot(x.numpy(),np.array(range(0,5))).astype(int)
-
       return [Chem.rdchem.BondType.SINGLE,Chem.rdchem.BondType.DOUBLE,\
             Chem.rdchem.BondType.TRIPLE,Chem.rdchem.BondType.AROMATIC,None][idx]
 
-"""Return a foobang
-
-Docstring test 2
-
-Docstring test 3
- 
-"""
   
- def A_x_to_mol(self,A,x):
+  def A_x_to_mol(self,A, x):
 
     mol = RWMol()
     n_atoms = x.size()[0]
 
+    non_empty_atoms = []
     for i in range(n_atoms):
-      mol.AddAtom(Chem.Atom(0))
+        if x[i,:][-1].numpy() != 1:
+            mol.AddAtom(Chem.Atom(0))
+            non_empty_atoms.append(i)
 
-    for i in range(n_atoms):
-      for j in range(n_atoms):
-        bond = Mol_dataset.array_to_bond(A[i,j])
-        if i>j and bond != None:
-          mol.AddBond(i,j,bond)
-
-    for i in range(n_atoms):
-      mol.GetAtomWithIdx(i).SetAtomicNum(self.array_to_atom(x[i,:]))
-
+    for i in non_empty_atoms:
+      for j in non_empty_atoms:
+         bond = self.array_to_bond(A[i,j,:])
+         if i>j and bond != None:
+             mol.AddBond(i,j,bond)
+    for i in non_empty_atoms:
+        mol.GetAtomWithIdx(i).SetAtomicNum(self.array_to_atom(x[i,:]))
     return mol
 
 
- def atom_features(self,mol):
+  def atom_features(self,mol):
     
     a_list = []
     max_atoms_types = len(self.atom_set)
@@ -111,7 +102,7 @@ Docstring test 3
       N_f_mat = torch.cat([N_f_mat,pad],dim=0)
     return N_f_mat
 
- def adj_mat(self,mol):
+  def adj_mat(self,mol):
     adjecency_mat = torch.zeros((self.N,self.N,4))
     for bond in mol.GetBonds():
         start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
@@ -119,9 +110,9 @@ Docstring test 3
         adjecency_mat[end,start,:] = Mol_dataset.bond_features(bond)
     return torch.cat([adjecency_mat,torch.zeros((self.N,self.N,1))],dim=-1)
 
+
   @staticmethod
   def reward(mol):
-
     LogP_ = Mol_dataset.water_octanol_partition_coefficient_scores([mol],norm=True)
     QED_  = Mol_dataset.quantitative_estimation_druglikeness_scores([mol],norm=True)
     SAS_  = Mol_dataset.synthetic_accessibility_score_scores([mol],norm=True)
