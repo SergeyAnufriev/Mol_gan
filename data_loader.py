@@ -13,7 +13,6 @@ Docstring test 1
 
 """
 
-
 class Mol_dataset(Dataset,MolecularMetrics):
   def __init__(self,sdf_file,atom_set=['C','O','N','F'],N=9):
     self.suppl    = Chem.SDMolSupplier(sdf_file)
@@ -71,7 +70,7 @@ Docstring test 3
  
 """
   
-  def A_x_to_mol(self,A,x):
+def A_x_to_mol(self,A,x):
 
     mol = RWMol()
     n_atoms = x.size()[0]
