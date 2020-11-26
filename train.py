@@ -8,8 +8,8 @@ import torch.optim as optim
 
 
 hyperparameter_defaults = dict(
-    h1 = 16,
-    h2 = 16,
+    h1 = 128,
+    h2 = 64,
     learning_rate = 0.0001,
     bz =64)
 
@@ -51,13 +51,14 @@ n_node_features = 5
 h1 = config.h1
 h2 = config.h2
 h3 = 128
+h4 = 64
 lr = config.learning_rate
 datka = Mol_dataset('/content/gdb9_clean.sdf')
 
 
 #train_d, test_d = train_test(dataset,b_size)
 train_d, test_d = train_test(datka,b_size)
-r_net = R(n_node_features,h1,h2,h3)
+r_net = R(n_node_features,h1,h2,h3,h4)
 optimizer = optim.Adam(r_net.parameters(), lr=lr)
 
 

@@ -101,7 +101,7 @@ class Convolve(nn.Module):
       super(Convolve,self).__init__()
 
       self.weight     = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels,n_relations), gain=1.0))
-      self.theta_root = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels), gain=1.0))
+      self.lin        = nn.Linear(in_channels,out_channels,bias=True)
 
     def forward(self,A,x):
 
@@ -110,7 +110,7 @@ class Convolve(nn.Module):
       norm     = 1./(sum_ + torch.full(sum_.size(),1e-7))  ## look for analytical solution
       A_new    = torch.einsum('sijcd,sicd->sijcd',A.unsqueeze(4),norm.unsqueeze(3))
       Theta_ij = torch.einsum('abc,sijcd->sijabd',self.weight,A_new).squeeze(-1)
-      x_new    = torch.einsum('sja,sijab->sib',x,Theta_ij) + torch.matmul(x,self.theta_root)
+      x_new    = torch.einsum('sja,sijab->sib',x,Theta_ij) + self.lin(x)
 
       return x_new
 
@@ -121,10 +121,8 @@ class gate_nn(torch.nn.Module):
   def __init__(self,in_channels):
     super(gate_nn,self).__init__()
     self.lin1 = nn.Linear(in_channels,1,bias=True)
-    self.act  = nn.Sigmoid() 
-
   def forward(self,x):
-    return self.act(self.lin1(x))
+    return self.lin1(x)
 
 
 ###### nn_ transforms nodes features ##########################
@@ -132,8 +130,8 @@ class gate_nn(torch.nn.Module):
 class nn_(torch.nn.Module):
   def __init__(self,in_channels,out_channels):
     super(nn_,self).__init__()
-    self.lin2 = nn.Linear(in_channels,out_channels,bias= True)
-    self.act  = nn.LeakyReLU()
+    self.lin2 = nn.Linear(in_channels,out_channels)
+    self.act  = nn.Tanh()
 
   def forward(self,x):
     return self.act(self.lin2(x))
@@ -158,15 +156,21 @@ class Aggregate(torch.nn.Module):
 ##### paper h1,h2,h3 = 64,32,128 
 
 class R(torch.nn.Module):
-  def __init__(self,in_channels,h_1,h_2,h_3):
+  def __init__(self,in_channels,h_1,h_2,h_3,h_4):
 
     super(R,self).__init__()
     self.conv1 = Convolve(in_channels,h_1,4)
     self.conv2 = Convolve(h_1+in_channels,h_2,4)
+
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
-    self.lin   = nn.Linear(h_3,1,bias=True)
-    self.act_h = nn.LeakyReLU()
-    
+
+    self.lin1   = nn.Linear(h_3,h_3,bias=True)
+    self.lin2   = nn.Linear(h_3,h_4,bias=True)
+
+    self.lin3   = nn.Linear(h_4,1,bias=True)
+
+    self.act_h   = nn.Tanh()
+    self.act_l   = nn.Sigmoid()
     
 
     
@@ -174,8 +178,13 @@ class R(torch.nn.Module):
 
     h_1    = self.act_h(self.conv1.forward(A,x))
     h_2    = self.act_h(self.conv2.forward(A,torch.cat((h_1,x),-1)))
+
     h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
-    scalar = self.lin(h_G)
+
+    h_G    = self.act_h(self.lin1(h_G))
+    h_G    = self.act_h(self.lin2(h_G))
+
+    scalar = self.act_l(self.lin3(h_G))
 
     return scalar
 

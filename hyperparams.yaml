@@ -6,9 +6,9 @@ metric:
   name: Test_Loss
 parameters:
   h1:
-    values: [16,32]
+    values: [128,64]
   h2:
-    values: [16,32]
+    values: [64,32]
   learning_rate:
     values: [0.0001, 0.001, 0.1]
   bz:
