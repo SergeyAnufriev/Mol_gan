@@ -2,7 +2,7 @@ from model import R
 from data_loader import Mol_dataset
 import wandb
 import torch.nn as nn
-from torch import cat,no_grad,float32,flatten
+from torch import cat,no_grad,float32,flatten,device
 from torch.utils.data import DataLoader,random_split
 import torch.optim as optim
 
@@ -54,11 +54,12 @@ h3 = 128
 h4 = 64
 lr = config.learning_rate
 datka = Mol_dataset('/content/gdb9_clean.sdf')
-
+cuda   = device('cuda')
 
 #train_d, test_d = train_test(dataset,b_size)
 train_d, test_d = train_test(datka,b_size)
-r_net = R(n_node_features,h1,h2,h3,h4)
+r_net = R(n_node_features,h1,h2,h3,h4,cuda)
+r_net.to(cuda)
 optimizer = optim.Adam(r_net.parameters(), lr=lr)
 
 
@@ -67,8 +68,8 @@ def main():
     for idx,(A,X,r) in enumerate(train_d):
         r = r.to(float32)
         optimizer.zero_grad()
-        outputs = r_net(A,X)
-        loss = criterion(outputs, r)
+        outputs = r_net(A.to(cuda),X.to(cuda))
+        loss = criterion(outputs, r.to(cuda))
         loss.backward()
         optimizer.step()
         train_loss += loss
