@@ -183,7 +183,7 @@ class R(torch.nn.Module):
     h_1    = self.act_h(self.conv1.forward(A,x))
     h_2    = self.act_h(self.conv2.forward(A,torch.cat((h_1,x),-1)))
 
-    h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1),x.batch))
+    h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
 
     h_G    = self.act_h(self.lin1(h_G))
     h_G    = self.act_h(self.lin2(h_G))
