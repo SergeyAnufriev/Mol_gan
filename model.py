@@ -147,11 +147,8 @@ class Aggregate(torch.nn.Module):
         super(Aggregate, self).__init__()
         self.agg = GlobalAttention(gate_nn, nn)
 
-    def forward(self,x,batch=None):
-        bz,n,f = x.size()
-        x = x.reshape(bz*n,f)
-        batch = torch.tensor(to_list(bz,n)).type(torch.LongTensor)
-        return self.agg(x,batch)
+    def forward(self,x):
+        return self.agg(x,x.batch)
 
 
 ##### paper h1,h2,h3 = 64,32,128 
