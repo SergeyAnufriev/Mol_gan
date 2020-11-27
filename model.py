@@ -97,17 +97,18 @@ class Generator(nn.Module):
 
 
 class Convolve(nn.Module):
-    def __init__(self,in_channels,out_channels,n_relations):
+    def __init__(self,in_channels,out_channels,n_relations,device):
       super(Convolve,self).__init__()
 
       self.weight     = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels,n_relations), gain=1.0))
       self.lin        = nn.Linear(in_channels,out_channels,bias=True)
+      self.device     = device
 
     def forward(self,A,x):
 
       A        = A[:,:,:,:-1]
       sum_     = torch.sum(A,dim=2)
-      norm     = 1./(sum_ + torch.full(sum_.size(),1e-7))  ## look for analytical solution
+      norm     = 1./(sum_ + torch.full(sum_.size(),1e-7,device=self.device))  ## look for analytical solution
       A_new    = torch.einsum('sijcd,sicd->sijcd',A.unsqueeze(4),norm.unsqueeze(3))
       Theta_ij = torch.einsum('abc,sijcd->sijabd',self.weight,A_new).squeeze(-1)
       x_new    = torch.einsum('sja,sijab->sib',x,Theta_ij) + self.lin(x)
@@ -156,11 +157,11 @@ class Aggregate(torch.nn.Module):
 ##### paper h1,h2,h3 = 64,32,128 
 
 class R(torch.nn.Module):
-  def __init__(self,in_channels,h_1,h_2,h_3,h_4):
+  def __init__(self,in_channels,h_1,h_2,h_3,h_4,device):
 
     super(R,self).__init__()
-    self.conv1 = Convolve(in_channels,h_1,4)
-    self.conv2 = Convolve(h_1+in_channels,h_2,4)
+    self.conv1 = Convolve(in_channels,h_1,4,device)
+    self.conv2 = Convolve(h_1+in_channels,h_2,4,device)
 
     self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
 
