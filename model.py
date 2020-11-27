@@ -143,12 +143,18 @@ class nn_(torch.nn.Module):
 
 
 class Aggregate(torch.nn.Module):
-    def __init__(self,gate_nn,nn):
+    def __init__(self,gate_nn,nn,device):
         super(Aggregate, self).__init__()
         self.agg = GlobalAttention(gate_nn, nn)
+        self.device = device
 
     def forward(self,x):
-        return self.agg(x,x.batch)
+
+        bz,n,f = x.size()
+        x = x.reshape(bz*n,f)
+        batch = torch.tensor(to_list(bz,n)).type(torch.LongTensor).to(self.device)
+
+        return self.agg(x,batch)
 
 
 ##### paper h1,h2,h3 = 64,32,128 
@@ -160,7 +166,7 @@ class R(torch.nn.Module):
     self.conv1 = Convolve(in_channels,h_1,4,device)
     self.conv2 = Convolve(h_1+in_channels,h_2,4,device)
 
-    self.agr   = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3))
+    self.agr    = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3),device)
 
     self.lin1   = nn.Linear(h_3,h_3,bias=True)
     self.lin2   = nn.Linear(h_3,h_4,bias=True)
@@ -177,7 +183,7 @@ class R(torch.nn.Module):
     h_1    = self.act_h(self.conv1.forward(A,x))
     h_2    = self.act_h(self.conv2.forward(A,torch.cat((h_1,x),-1)))
 
-    h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
+    h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1),x.batch))
 
     h_G    = self.act_h(self.lin1(h_G))
     h_G    = self.act_h(self.lin2(h_G))
