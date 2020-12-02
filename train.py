@@ -13,7 +13,6 @@ manual_seed(seed)
 np.random.seed(seed)
 backends.cudnn.deterministic = True
 
-PATH   = os.path.join(wandb.run.dir, "model.pt")
 cuda   = device('cuda')
 
 hyperparameter_defaults = dict(
@@ -26,6 +25,7 @@ hyperparameter_defaults = dict(
 
 wandb.init(config=hyperparameter_defaults, project="rew_test") #####
 config = wandb.config
+PATH   = os.path.join(wandb.run.dir, "model.pt")
 
 
 def train_test(dataset,b_size):
