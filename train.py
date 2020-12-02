@@ -2,16 +2,27 @@ from model import R
 from data_loader import Mol_dataset
 import wandb
 import torch.nn as nn
-from torch import cat,no_grad,float32,flatten,device
+from torch import cat,no_grad,float32,flatten,device,save,manual_seed,backends
 from torch.utils.data import DataLoader,random_split
 import torch.optim as optim
+import numpy as np
+import os
 
+seed = 42
+manual_seed(seed)
+np.random.seed(seed)
+backends.cudnn.deterministic = True
+
+PATH   = os.path.join(wandb.run.dir, "model.pt")
+cuda   = device('cuda')
 
 hyperparameter_defaults = dict(
     h1 = 128,
     h2 = 64,
     learning_rate = 0.0001,
-    bz =64)
+    bz =64,
+    epochs = 5,
+    drop_out=0.1)
 
 wandb.init(config=hyperparameter_defaults, project="rew_test") #####
 config = wandb.config
@@ -33,17 +44,16 @@ def test(model, test_loader): #### over full test dataset average loss
   test_loss = 0
   with no_grad():
     for a,x,r in test_loader:
-      outputs    = model(a,x)
-      test_loss += criterion(outputs, r)
+      outputs    = model(a.to(cuda),x.to(cuda))
+      test_loss += criterion(outputs, r.to(cuda))
     wandb.log({'Test_Loss':test_loss/(len(test_loader.dataset)/test_loader.batch_size)})
 
 
 def grad_info(model):
-  total_grad = []
   for name, param in model.named_parameters():
-    grad = list(flatten(param.grad).numpy())
+    grad = list(flatten(param.grad).cpu().numpy())
     wandb.log({name: wandb.Histogram(grad)})
-    total_grad +=grad
+
 
 
 b_size = config.bz
@@ -53,33 +63,37 @@ h2 = config.h2
 h3 = 128
 h4 = 64
 lr = config.learning_rate
+dr = config.drop_out
+epochs = config.epochs
 datka = Mol_dataset('/content/gdb9_clean.sdf')
-cuda   = device('cuda')
+
 
 #train_d, test_d = train_test(dataset,b_size)
 train_d, test_d = train_test(datka,b_size)
-r_net = R(n_node_features,h1,h2,h3,h4,cuda)
+r_net = R(n_node_features,h1,h2,h3,h4,dr,cuda)
 r_net.to(cuda)
 optimizer = optim.Adam(r_net.parameters(), lr=lr)
 
 
 def main():
     train_loss = 0
-    for idx,(A,X,r) in enumerate(train_d):
-        r = r.to(float32)
-        optimizer.zero_grad()
-        outputs = r_net(A.to(cuda),X.to(cuda))
-        loss = criterion(outputs, r.to(cuda))
-        loss.backward()
-        optimizer.step()
-        train_loss += loss
-        if idx %10 ==0:
-            test(r_net,test_d)  ### Evaluate mean test loss on all batches in test dataset
-            wandb.log({'Train_Loss':train_loss/10})  ### Average train loss on 10 last betches
-            grad_info(r_net) ### Get Weights gradient info and total grad L2 norm
-            train_loss = 0
-        if idx == 500:
-            break
+    for _ in range(epochs):
+        for idx,(A,X,r) in enumerate(train_d):
+            r = r.to(float32)
+            optimizer.zero_grad()
+            outputs = r_net(A.to(cuda),X.to(cuda))
+            loss = criterion(outputs, r.to(cuda))
+            loss.backward()
+            optimizer.step()
+            train_loss += loss
+            if idx %10 ==0:
+                test(r_net,test_d)  ### Evaluate mean test loss on all batches in test dataset
+                wandb.log({'Train_Loss':train_loss/10})  ### Average train loss on 10 last betches
+                grad_info(r_net) ### Get Weights gradient info and total grad L2 norm
+                train_loss = 0
+
+    save(r_net, PATH)
+    wandb.save(PATH)
 
 if __name__ == '__main__':
    main()

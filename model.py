@@ -89,12 +89,8 @@ class Generator(nn.Module):
 
         return  nodes, edges
     
-    
 
-  
 ################## CONVOLUTION RELATIONAL GCN OPERATOR ###############################
-
-
 
 class Convolve(nn.Module):
     def __init__(self,in_channels,out_channels,n_relations,device):
@@ -119,23 +115,25 @@ class Convolve(nn.Module):
 ####### gate_nn computes Attention score during Global aggregation ######################
 
 class gate_nn(torch.nn.Module):
-  def __init__(self,in_channels):
+  def __init__(self,in_channels,drop_out):
     super(gate_nn,self).__init__()
-    self.lin1 = nn.Linear(in_channels,1,bias=True)
+    self.lin1     = nn.Linear(in_channels,1,bias=True)
+    self.drop_out = nn.Dropout(drop_out)
   def forward(self,x):
-    return self.lin1(x)
+    return self.drop_out(self.lin1(x))
 
 
 ###### nn_ transforms nodes features ##########################
 
 class nn_(torch.nn.Module):
-  def __init__(self,in_channels,out_channels):
+  def __init__(self,in_channels,out_channels,drop_out):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels)
     self.act  = nn.Tanh()
+    self.drop_out = nn.Dropout(drop_out)
 
   def forward(self,x):
-    return self.act(self.lin2(x))
+    return self.act(self.drop_out(self.lin2(x)))
 
 
 ######## Combines each node represenations from nn_ and sums by 
@@ -157,38 +155,37 @@ class Aggregate(torch.nn.Module):
         return self.agg(x,batch)
 
 
-##### paper h1,h2,h3 = 64,32,128 
+##### paper h1,h2,h3,h4 = 128,64,128,64
 
 class R(torch.nn.Module):
-  def __init__(self,in_channels,h_1,h_2,h_3,h_4,device):
-
+  def __init__(self,in_channels,h_1,h_2,h_3,h_4,drop_out,device):
     super(R,self).__init__()
-    self.conv1 = Convolve(in_channels,h_1,4,device)
-    self.conv2 = Convolve(h_1+in_channels,h_2,4,device)
 
-    self.agr    = Aggregate(gate_nn(h_2+in_channels),nn_(h_2+in_channels,h_3),device)
+    self.conv1  = Convolve(in_channels,h_1,4,device)
+    self.conv2  = Convolve(h_1+in_channels,h_2,4,device)
 
-    self.lin1   = nn.Linear(h_3,h_3,bias=True)
-    self.lin2   = nn.Linear(h_3,h_4,bias=True)
+    self.agr    = Aggregate(gate_nn(h_2+in_channels,drop_out),nn_(h_2+in_channels,h_3,drop_out),device)
 
-    self.lin3   = nn.Linear(h_4,1,bias=True)
+    self.lin3   = nn.Linear(h_3,h_3,bias=True)
+    self.lin4   = nn.Linear(h_3,h_4,bias=True)
+    self.lin5   = nn.Linear(h_4,1,bias=True)
 
-    self.act_h   = nn.Tanh()
-    self.act_l   = nn.Sigmoid()
+    self.act        = nn.Tanh()
+    self.act_last   = nn.Sigmoid()
+
+    self.drop_out   = nn.Dropout(drop_out)
     
 
     
   def forward(self,A,x):
 
-    h_1    = self.act_h(self.conv1.forward(A,x))
-    h_2    = self.act_h(self.conv2.forward(A,torch.cat((h_1,x),-1)))
+    h_1    = self.act(self.drop_out(self.conv1.forward(A,x)))
+    h_2    = self.act(self.drop_out(self.conv2.forward(A,torch.cat((h_1,x),-1))))
+    h_3    = self.act(self.agr.forward(torch.cat((h_2,x),-1)))
+    h_4    = self.act(self.drop_out(self.lin3(h_3)))
+    h_5    = self.act(self.drop_out(self.lin4(h_4)))
 
-    h_G    = self.act_h(self.agr.forward(torch.cat((h_2,x),-1)))
-
-    h_G    = self.act_h(self.lin1(h_G))
-    h_G    = self.act_h(self.lin2(h_G))
-
-    scalar = self.act_l(self.lin3(h_G))
+    scalar = self.act_last(self.drop_out(self.lin5(h_5)))
 
     return scalar
 
