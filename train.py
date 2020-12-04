@@ -8,10 +8,10 @@ import torch.optim as optim
 import numpy as np
 import os
 
-seed = 42
-manual_seed(seed)
-np.random.seed(seed)
-backends.cudnn.deterministic = True
+#seed = 42
+#manual_seed(seed)
+#np.random.seed(seed)
+#backends.cudnn.deterministic = True
 
 cuda   = device('cuda')
 
