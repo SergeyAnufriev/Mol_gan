@@ -8,12 +8,21 @@ import torch.optim as optim
 import numpy as np
 import os
 
+'''
+ this script runs reward network training in for the graph regression task 
+ reward network takes adjececy tensor and node feature matrix representing graph and outputs scalar value 
+'''
+
+
+'''fix random seed'''
 #seed = 42
 #manual_seed(seed)
 #np.random.seed(seed)
 #backends.cudnn.deterministic = True
 
 cuda   = device('cuda')
+
+'''default hyperparametrs used to initiate hyperparameters grid search'''
 
 hyperparameter_defaults = dict(
     h1 = 128,
@@ -27,6 +36,7 @@ wandb.init(config=hyperparameter_defaults, project="rew_test") #####
 config = wandb.config
 PATH   = os.path.join(wandb.run.dir, "model.pt")
 
+'''split dataset into train and test parts'''
 
 def train_test(dataset,b_size):
   x = int(len(dataset)*0.8)
@@ -39,6 +49,8 @@ def train_test(dataset,b_size):
 
 criterion = nn.MSELoss()
 
+'''test function calculates mse error over the whole test part of data'''
+
 def test(model, test_loader): #### over full test dataset average loss
   model.eval()
   test_loss = 0
@@ -48,13 +60,14 @@ def test(model, test_loader): #### over full test dataset average loss
       test_loss += criterion(outputs, r.to(cuda))
     wandb.log({'Test_Loss':test_loss/(len(test_loader.dataset)/test_loader.batch_size)})
 
+'''grad_info function records per train batch gradients for each model parameter'''
 
 def grad_info(model):
   for name, param in model.named_parameters():
     grad = list(flatten(param.grad).cpu().numpy())
     wandb.log({name: wandb.Histogram(grad)})
 
-
+'''model configuration parameters listed below '''
 
 b_size = config.bz
 n_node_features = 5
@@ -65,6 +78,9 @@ h4 = 64
 lr = config.learning_rate
 dr = config.drop_out
 epochs = config.epochs
+
+'''QM9 dataset is used to train reward network model'''
+
 datka = Mol_dataset('/content/gdb9_clean.sdf')
 
 
@@ -74,6 +90,7 @@ r_net = R(n_node_features,h1,h2,h3,h4,dr,cuda)
 r_net.to(cuda)
 optimizer = optim.Adam(r_net.parameters(), lr=lr)
 
+'''Training loop '''
 
 def main():
     train_loss = 0

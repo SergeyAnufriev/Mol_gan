@@ -9,7 +9,7 @@ from torch.nn.functional import one_hot
 
 """Return a foobang
 
-Docstring test 1 
+this module creates molecular data loader
 
 """
 

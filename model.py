@@ -6,6 +6,10 @@ from torch.nn.parameter import Parameter
 
 print('useless code')
 
+'''This code is used to construct generative models '''
+
+
+
 def permute3D(A):
 
   A = A.permute(2,0,1)
@@ -24,6 +28,10 @@ def permute4D(A):
   A_new = A_new.permute(3,0,1,2)
 
   return A_new
+
+
+'''A_mat takes graph represented by torch_geometric class and outputs adjecency tensor A,
+   WHERE A[i,j,:] = type of connection between nodes i and j'''
 
 def A_mat(data):   ### data to one-hot-encode adjacency tensor
   edge_type  = data.edge_attr
@@ -45,6 +53,7 @@ def to_list(bz,n_nodes):
     final_list += [i]*n_nodes
   return final_list
 
+'''MOLECULAR GAN GENERATOR CLASS'''
 
 class Generator(nn.Module):
 
@@ -89,8 +98,7 @@ class Generator(nn.Module):
 
         return  nodes, edges
     
-
-################## CONVOLUTION RELATIONAL GCN OPERATOR ###############################
+'''CONVOLUTION RELATIONAL GCN OPERATOR'''
 
 class Convolve(nn.Module):
     def __init__(self,in_channels,out_channels,n_relations,device):
@@ -112,7 +120,7 @@ class Convolve(nn.Module):
       return x_new
 
 
-####### gate_nn computes Attention score during Global aggregation ######################
+'''gate_nn computes Attention score during Global aggregation'''
 
 class gate_nn(torch.nn.Module):
   def __init__(self,in_channels,drop_out):
@@ -123,7 +131,7 @@ class gate_nn(torch.nn.Module):
     return self.drop_out(self.lin1(x))
 
 
-###### nn_ transforms nodes features ##########################
+'''Graph nodes transformation network for Global aggregation layer'''
 
 class nn_(torch.nn.Module):
   def __init__(self,in_channels,out_channels,drop_out):
@@ -157,6 +165,8 @@ class Aggregate(torch.nn.Module):
 
 ##### paper h1,h2,h3,h4 = 128,64,128,64
 
+'''Rewrard and discriminator network class'''
+
 class R(torch.nn.Module):
   def __init__(self,in_channels,h_1,h_2,h_3,h_4,drop_out,device):
     super(R,self).__init__()
@@ -174,7 +184,6 @@ class R(torch.nn.Module):
     self.act_last   = nn.Sigmoid()
 
     self.drop_out   = nn.Dropout(drop_out)
-    
 
     
   def forward(self,A,x):
