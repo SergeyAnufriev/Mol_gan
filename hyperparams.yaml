@@ -6,14 +6,14 @@ metric:
   name: Test_Loss
 parameters:
   h1:
-    values: [128,32]
+    values: [128,256]
   h2:
-    values: [64,32]
+    values: [64,128]
   learning_rate:
     values: [0.0001, 0.001, 0.1]
   drop_out:
     values: [0.1,0.2,0.4]
   bz:
     value: 64
-  epoch:
-    value: 3
+  epochs:
+    value: 5

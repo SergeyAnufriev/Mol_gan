@@ -7,11 +7,15 @@ from torch.utils.data import DataLoader,random_split
 import torch.optim as optim
 import numpy as np
 import os
+import random
 
-#seed = 42
-#manual_seed(seed)
-#np.random.seed(seed)
-#backends.cudnn.deterministic = True
+
+seed = 42
+manual_seed(seed)
+np.random.seed(seed)
+backends.cudnn.deterministic = True
+random.seed(seed)
+
 
 cuda   = device('cuda')
 
