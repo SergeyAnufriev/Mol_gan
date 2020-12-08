@@ -1,5 +1,5 @@
 
-********Experiment 1.
+**Experiment 1
 
 **Investigation**:
 
@@ -26,7 +26,7 @@ The model, which run longer has lower test loss. Fig.2 illustrate approximate co
 Longer  run loss: 0.0014
 Shorter run loss: 0.0022
 
-The model must have higher number of iteration steps [Fig.2] 
+The model converges at 10^3 iteration steps [Fig.2] 
 
 
 
