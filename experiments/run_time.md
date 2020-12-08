@@ -14,3 +14,6 @@ https://github.com/SergeyAnufriev/Mol_gan/blob/bf0eda1bf7249ae926da4a8700e24a169
 Time without: 20min all 5 epochs done
 Time with: 9.5h not completed. 
 
+**To do next**
+
+
