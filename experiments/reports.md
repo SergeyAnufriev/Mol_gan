@@ -32,4 +32,5 @@ The model converges at 10^3 iteration steps [Fig.2]
 
 Slow convergence requires more time to run each experiment. Time is important,since many different model configurations must be tested. 
 
+
 * Measure time to train one model configuration. 
