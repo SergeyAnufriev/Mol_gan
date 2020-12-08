@@ -11,6 +11,9 @@ import numpy as np
 NP_model = pickle.load(gzip.open('data/NP_score.pkl.gz'))
 SA_model = {i[j]: float(i[0]) for i in pickle.load(gzip.open('data/SA_score.pkl.gz')) for j in range(1, len(i))}
 
+'''this file comes from repository https://github.com/nicola-decao/MolGAN/blob/master/utils/molecular_metrics.py ....
+     the file purpose is to calculate various molecular properties 
+     with rdkit software'''
 
 class MolecularMetrics(object):
 

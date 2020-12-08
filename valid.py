@@ -16,6 +16,8 @@ class Queue:
         else:
             return self.items.pop()
 
+'''BFS ALGORITHM TO COMPUTE SHORTEST DISTANCE'''
+
 def distance(adj_list,start): ### BFS
 
     q = Queue()
@@ -46,7 +48,7 @@ def distance(adj_list,start): ### BFS
         colour[u] = 'BLACK'
     return dist
 
-
+'''find all disconnetced subgaphs in graph'''
 def subgraphs(adj_list):
 
   nodes     = list(range(len(adj_list)))

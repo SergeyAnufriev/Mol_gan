@@ -7,7 +7,11 @@ fake_label = 0.
 
 criterion = torch.nn.BCEWithLogitsLoss()
 
+'''this file collects GAN losses functions'''
 
+
+
+'''DCGAN DISCRIMINATOR LOSS'''
 def gan_loss_dis(A_r,x_r,A_f,x_f,netD):
 
     b_size   = x_f.size()[0]
@@ -22,7 +26,7 @@ def gan_loss_dis(A_r,x_r,A_f,x_f,netD):
 
     return -Loss_real+Loss_fake
 
-
+'''DCGAN GENERATOR LOSS'''
 def gan_loss_gen(A_f,x_f,netD):
 
     b_size   = x_f.size()[0]
@@ -32,7 +36,7 @@ def gan_loss_gen(A_f,x_f,netD):
 
     return -Loss_gen
 
-
+'''WGAN LOSS DISCRIMINATOR'''
 def wgan_dis(A_r,x_r,A_f,x_f,netD):
 
   Loss_real = netD(A_r,x_r).mean()
@@ -40,11 +44,11 @@ def wgan_dis(A_r,x_r,A_f,x_f,netD):
 
   return Loss_real-Loss_fake
 
-
+'''WGAN LOSS GENERATOR'''
 def wgan_gen(A_f,x_f,netD):
   return netD(A_f,x_f).mean()
 
-
+'''GRADIENT PENALTY DISCRIMINATOR'''
 def grad_penalty(A_r,x_r,A_f,x_f,netD):
     
     eps   = torch.rand(A_r.size()[0])

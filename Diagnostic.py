@@ -8,6 +8,9 @@ from copy import deepcopy
 from scipy.sparse.linalg import eigs,eigsh
 import plotly.graph_objects as go
 
+'''This module purpose is to analyse neural network properties and interaction between them in case'''
+
+'''Gradient information'''
 
 def grad_info(model,t):
   total_grad = []
@@ -19,7 +22,7 @@ def grad_info(model,t):
     
   return np.linalg.norm(total_grad)
   
-  
+'''Find the total number of model parameters'''
   
 def get_n_params(model):
     pp=0
@@ -29,6 +32,10 @@ def get_n_params(model):
             nn = nn*s
         pp += nn
     return pp
+
+
+'''Given vector V, shift model parameters along +-lambda*V
+  ,where lambda scalar between -1 and 1'''
   
 def model_params_shift(model,vec,lambd):
   
@@ -45,6 +52,8 @@ def model_params_shift(model,vec,lambd):
     s+= p.numel()
 
   return model.cuda() # model with shifted parameters
+
+'''plot model loss along +-lambda*V'''
 
 def curvature(model,vec,lams):
   losses = []
@@ -206,18 +215,24 @@ class Jacobian(linalg.LinearOperator):
     else:
       return eigs(self,which = which,k=n_eigen)
 
-  def rand_vec(self):### sample from Rademacher distribution
+  '''random vector from Rademacher distribution'''
+
+  def rand_vec(self):
     v = torch.cat([torch.randint_like(p.data, high=2,device=self.device).flatten()\
           for p in self.params]).unsqueeze(-1)
     v[v==0.]=-1. 
     return v/np.sqrt(len(v))
-  
-  @staticmethod ### Orthogonilise: Gram-Schmidt process 
+
+  '''Orthogonilise: Gram-Schmidt process '''
+
+  @staticmethod
   def ort(w,list1):
     for v in list1:
       w = w - torch.matmul(w.T,v)*v
       w = w/torch.norm(w)
     return w
+
+  '''Lancazos algorithm'''
 
   def lanczos(self,n_iter):  ### Returns V basis and T tridiagonal matrix
                               
@@ -266,7 +281,8 @@ def min_max(X): #X 2D array
   x2_gen = X[:,1]
   return np.min(x1_gen),np.max(x2_gen),\
          np.min(x2_gen),np.max(x2_gen)
-  
+
+'''vis function plots GAN 2D generated vs real points, with background coloured by discriminator output'''
 
 def vis(G,D,X_train_save,z_fixed,device):
   with torch.no_grad():

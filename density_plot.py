@@ -26,6 +26,9 @@ import matplotlib.pyplot as plt
 from torch import eig
 
 
+'''this file is a copy of https://github.com/amirgholami/PyHessian/blob/master/density_plot.py'''
+'''eigenvalues spectral density plot'''
+
 def get_esd_plot2(T):
     
     vals = eig(T,eigenvectors=True)
