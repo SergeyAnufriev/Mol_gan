@@ -7,6 +7,9 @@ from torch.utils.data import DataLoader,random_split
 import torch.optim as optim
 import numpy as np
 import os
+import random
+
+
 
 '''
  this script runs reward network training in for the graph regression task 
@@ -15,10 +18,13 @@ import os
 
 
 '''fix random seed'''
-#seed = 42
-#manual_seed(seed)
-#np.random.seed(seed)
-#backends.cudnn.deterministic = True
+seed = 42
+manual_seed(seed)
+np.random.seed(seed)
+backends.cudnn.deterministic = True
+random.seed(seed)
+
+
 
 cuda   = device('cuda')
 
