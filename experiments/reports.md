@@ -19,6 +19,7 @@ Figure 1 compares 2 runs with the same hyperparameters, but with different numbe
 The model, which run longer has lower test loss. Fig.2 illustrate approximate convergence number of iteration steps before the convergence. 
 
 ![alt text](https://github.com/SergeyAnufriev/Mol_gan/blob/master/figures/Fig2.png)
+[Fig.2]
 
 Conclusion:
 
