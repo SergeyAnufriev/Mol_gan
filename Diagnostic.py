@@ -10,17 +10,37 @@ import plotly.graph_objects as go
 
 '''This module purpose is to analyse neural network properties and interaction between them in case'''
 
-'''Gradient information'''
 
-def grad_info(model,t):
-  total_grad = []
+
+
+activation = {}
+def get_activation(name):
+  def hook(model, input, output):
+    activation[name] = output.detach()
+  return hook
+
+def hook(model):
+  for item in list(model._modules.items()):
+    item[1].register_forward_hook(get_activation(item[0]))
+
+
+'''Train information: weights, gradients, activations'''
+
+def train_info(model):
   for name, param in model.named_parameters():
-    
+
+    '''weights histogram'''
+    weight = list(torch.flatten(param.data))
+    wandb.log({name+weight:wandb.Histogram(weight)})
+
+    '''gradient histogram'''
     grad = list(torch.flatten(param.grad).cpu().detach().numpy())
-    wandb.log({t+name: wandb.Histogram(grad)})
-    total_grad +=grad 
-    
-  return np.linalg.norm(total_grad)
+
+    wandb.log({name+grad: wandb.Histogram(grad)})
+
+    '''layers activations'''
+    wandb.log({name+'act':wandb.Histogram(torch.flatten(activation[name]))})
+
   
 '''Find the total number of model parameters'''
   
