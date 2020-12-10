@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 
 
 
+
 activation = {}
 def get_activation(name):
   def hook(model, input, output):
@@ -34,6 +35,7 @@ def train_info(model):
 
     '''gradient histogram'''
     grad = list(torch.flatten(param.grad).cpu().detach().numpy())
+
     wandb.log({name+grad: wandb.Histogram(grad)})
 
     '''layers activations'''
