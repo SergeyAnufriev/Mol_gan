@@ -180,19 +180,23 @@ class R(torch.nn.Module):
     self.lin4   = nn.Linear(h_3,h_4,bias=True)
     self.lin5   = nn.Linear(h_4,1,bias=True)
 
-    self.act        = nn.Tanh()
-    self.act_last   = nn.Sigmoid()
+    self.act1        = nn.Tanh()
+    self.act2        = nn.Tanh()
+    self.act3        = nn.Tanh()
+    self.act4        = nn.Tanh()
+    self.act5        = nn.Tanh()
+    self.act_last    = nn.Sigmoid()
 
     self.drop_out   = nn.Dropout(drop_out)
 
     
   def forward(self,A,x):
 
-    h_1    = self.act(self.drop_out(self.conv1.forward(A,x)))
-    h_2    = self.act(self.drop_out(self.conv2.forward(A,torch.cat((h_1,x),-1))))
-    h_3    = self.act(self.agr.forward(torch.cat((h_2,x),-1)))
-    h_4    = self.act(self.drop_out(self.lin3(h_3)))
-    h_5    = self.act(self.drop_out(self.lin4(h_4)))
+    h_1    = self.act1(self.drop_out(self.conv1.forward(A,x)))
+    h_2    = self.act2(self.drop_out(self.conv2.forward(A,torch.cat((h_1,x),-1))))
+    h_3    = self.act3(self.agr.forward(torch.cat((h_2,x),-1)))
+    h_4    = self.act4(self.drop_out(self.lin3(h_3)))
+    h_5    = self.act5(self.drop_out(self.lin4(h_4)))
 
     scalar = self.act_last(self.drop_out(self.lin5(h_5)))
 
