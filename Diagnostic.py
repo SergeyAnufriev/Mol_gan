@@ -7,6 +7,7 @@ from torch.autograd import grad
 from copy import deepcopy
 from scipy.sparse.linalg import eigs,eigsh
 import plotly.graph_objects as go
+from sklearn.metrics import r2_score,mean_absolute_error
 
 '''This module purpose is to analyse neural network properties and interaction between them in case'''
 
@@ -30,16 +31,23 @@ def train_info(model):
   for name, param in model.named_parameters():
 
     '''weights histogram'''
-    weight = list(torch.flatten(param.data))
-    wandb.log({name+weight:wandb.Histogram(weight)})
+    weight = list(torch.flatten(param.data).cpu().detach().numpy())
+    wandb.log({name+'_'+'weight':wandb.Histogram(weight)})
 
     '''gradient histogram'''
     grad = list(torch.flatten(param.grad).cpu().detach().numpy())
+    wandb.log({name+'_'+'grad': wandb.Histogram(grad)})
 
-    wandb.log({name+grad: wandb.Histogram(grad)})
 
-    '''layers activations'''
-    wandb.log({name+'act':wandb.Histogram(torch.flatten(activation[name]))})
+def test(model,test_loader,criterion): #### over full test dataset average loss
+  model.eval()
+  test_loss = 0
+  with torch.no_grad():
+    for a,x,r in test_loader:
+      outputs    = model(a,x)
+      test_loss += criterion(outputs, r)
+    wandb.log({'Test_Loss':test_loss/(len(test_loader.dataset)/test_loader.batch_size)})
+
 
   
 '''Find the total number of model parameters'''
@@ -52,6 +60,38 @@ def get_n_params(model):
             nn = nn*s
         pp += nn
     return pp
+
+def plot_real_vs_predicted(model,A,X,r):
+    model.eval()
+    y_pred = model(A,X)
+    y_pred = y_pred.detach().cpu().numpy()
+    r      = r.detach().cpu().numpy()
+    r2  = r2_score(r,y_pred)
+    mae = mean_absolute_error(r,y_pred)
+    wandb.log({'R2':r2})
+    wandb.log({'MAE':mae})
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=r.squeeze(-1).tolist(), y=y_pred.squeeze(-1).tolist(),
+                    mode='markers',
+                    name='predictions'))
+    fig.add_trace(go.Scatter(x=np.linspace(0,0.5,100).tolist(), y=np.linspace(0,0.5,100).tolist(),
+                    mode='lines',
+                    name='x=y,ideal'))
+    fig.update_layout(
+       autosize=False,
+       width=600,
+       height=600,
+       xaxis_title="Real",
+       yaxis_title="Predicted")
+    fig.add_annotation(x=0.4, y=0.0,
+            text="R2"+'=' + str(r2),
+            showarrow=False,
+            yshift=10)
+    fig.add_annotation(x=0.4, y=0.05,
+            text="MAE"+'=' + str(mae),
+            showarrow=False,
+            yshift=10)
+    wandb.log({'Real_vs_Predicted':fig})
 
 
 '''Given vector V, shift model parameters along +-lambda*V

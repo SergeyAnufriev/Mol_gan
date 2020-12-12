@@ -1,6 +1,19 @@
 import torch
 from torch.autograd import grad
 from torch.autograd import Variable
+from torch.utils.data import DataLoader,random_split
+
+
+def train_test(dataset,b_size):
+  x = int(len(dataset)*0.8)
+  y = len(dataset) - x
+  train_dataset, test_dataset = random_split(dataset, [x, y])
+  train_d, test_d = DataLoader(train_dataset,b_size,True,drop_last=True),\
+                  DataLoader(test_dataset,b_size,True,drop_last=True)
+  return train_d, test_d
+
+
+
 
 real_label = 1.
 fake_label = 0.
