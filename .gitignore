@@ -1,5 +1,5 @@
-
-/mol_venv/
-
 .idea/
-
+/sub_prog
+/data
+__pycache__/
+/ML_TEST/wandb
