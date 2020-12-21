@@ -28,9 +28,12 @@ def train_info(model):
     wandb.log({name+'act':wandb.Histogram(torch.flatten(activation[name]))})
 
   
-'''Find the total number of model parameters'''
+
   
 def get_n_params(model):
+  
+    '''Find the total number of model parameters'''
+    
     pp=0
     for p in list(model.parameters()):
         nn=1
@@ -43,12 +46,7 @@ def get_n_params(model):
 def model_params_shift(model,vec,lambd):
   
   '''Function returns model with its parameters shifted along given vector V times lamd scalar'''
-  
-  # shift model params along vec by const lambd
-  #model: pytorch module
-  #vec  : np.array
-  #lambda : scalar in [0,1]
-  
+
   model = deepcopy(model)
 
   s = 0
@@ -219,7 +217,9 @@ class Jacobian(linalg.LinearOperator):
       return self.JVP(v).cpu().detach().numpy()
 
   def trace(self,n_iter):
+    
     '''Hutchinson Stochastic Trace Estimation'''
+    
     trace_list = []
     for _ in range(n_iter):
       v = self.rand_vec()
