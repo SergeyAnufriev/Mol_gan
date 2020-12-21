@@ -11,22 +11,8 @@ import plotly.graph_objects as go
 '''This module purpose is to analyse neural network properties and interaction between them in case'''
 
 
-
-
-activation = {}
-def get_activation(name):
-  def hook(model, input, output):
-    activation[name] = output.detach()
-  return hook
-
-def hook(model):
-  for item in list(model._modules.items()):
-    item[1].register_forward_hook(get_activation(item[0]))
-
-
-'''Train information: weights, gradients, activations'''
-
 def train_info(model):
+  '''Train information: weights, gradients, activations'''
   for name, param in model.named_parameters():
 
     '''weights histogram'''
@@ -53,11 +39,10 @@ def get_n_params(model):
         pp += nn
     return pp
 
-
-'''Given vector V, shift model parameters along +-lambda*V
-  ,where lambda scalar between -1 and 1'''
   
 def model_params_shift(model,vec,lambd):
+  
+  '''Function returns model with its parameters shifted along given vector V times lamd scalar'''
   
   # shift model params along vec by const lambd
   #model: pytorch module
@@ -71,11 +56,14 @@ def model_params_shift(model,vec,lambd):
     p.data += lambd*torch.tensor(vec[s:s+p.numel()],device=p.device).view(p.size())
     s+= p.numel()
 
-  return model.cuda() # model with shifted parameters
+  return model.cuda()
 
-'''plot model loss along +-lambda*V'''
+
 
 def curvature(model,vec,lams):
+  
+  '''plot model loss along +-lambda*V'''
+  
   losses = []
   for lambd in lams:
     m = model_params_shift(model,vec,lambd)
@@ -86,6 +74,10 @@ def curvature(model,vec,lams):
   
   
 class Gradient:
+  
+  '''Calclutes gradients for Generator (G) and Discriminator (D) per batch and average 
+   per epoch'''
+  
   def __init__(self,D,G,L1,L2,z_dim,device,data=None,dataloader=None):
     
     if data != None:
@@ -175,6 +167,11 @@ class Gradient:
   
 class Jacobian(linalg.LinearOperator):
   def __init__(self,first_grad,params,device,transpose=False):
+    
+    '''first derivative of loss to params : first_grad
+       params                             : vars by which loss is differentiated  
+       transpose                          : math transpose '''
+       
 
     self.first_grad = first_grad
     self.params     = params
@@ -190,10 +187,15 @@ class Jacobian(linalg.LinearOperator):
   
   @staticmethod
   def vectorize(x):
+    
+    ''' All params into single vector'''
+    
     return torch.cat([torch.flatten(y) for y in x]).unsqueeze(-1)
   
   def JVP(self,v):
-    # operator J(first_grad,params)v --> Hessian(params)v
+    
+    ''' operator J(first_grad,params)v --> Hessian(params)v : hessian vector product, where J - Jacobian'''
+    
     dF   = Jacobian.vectorize(self.first_grad)
     u    = torch.ones_like(dF,requires_grad=True)       
     g_v  = grad(dF,self.params,u,create_graph=True,retain_graph=True)
@@ -202,10 +204,13 @@ class Jacobian(linalg.LinearOperator):
     return ans
 
   def JTVP(self,v):
-    # operator J^T(first_grad,params)v --> Hessian^T(params)v
+    ''' operator J^T(first_grad,params)v --> Hessian^T(params)v'''
     return Jacobian.vectorize(grad(Jacobian.vectorize(self.first_grad),self.params,v,retain_graph=True))
 
   def _matvec(self,v):
+    
+    ''' mat vec product for linear operator in scipy'''
+    
     v = np.expand_dims(v,axis=-1)
     v = torch.tensor(v,device=self.device)
     if self.transpose == True:
@@ -213,7 +218,8 @@ class Jacobian(linalg.LinearOperator):
     else:
       return self.JVP(v).cpu().detach().numpy()
 
-  def trace(self,n_iter): ### n_iter for Hutchinson Stochastic Trace Estimators
+  def trace(self,n_iter):
+    '''Hutchinson Stochastic Trace Estimation'''
     trace_list = []
     for _ in range(n_iter):
       v = self.rand_vec()
@@ -221,6 +227,8 @@ class Jacobian(linalg.LinearOperator):
     return torch.mean(torch.tensor(trace_list))
   
   def eigen_pair(self,n_eigen,which):  #### returns [eig_val, eig_vec]
+      
+      '''Returns top -K eigenvalues'''
     
     #### WHICH ################
     #‘LM’ : largest magnitude
@@ -235,26 +243,33 @@ class Jacobian(linalg.LinearOperator):
     else:
       return eigs(self,which = which,k=n_eigen)
 
-  '''random vector from Rademacher distribution'''
+  
 
   def rand_vec(self):
+    
+    '''random vector from Rademacher distribution'''
+    
     v = torch.cat([torch.randint_like(p.data, high=2,device=self.device).flatten()\
           for p in self.params]).unsqueeze(-1)
     v[v==0.]=-1. 
     return v/np.sqrt(len(v))
 
-  '''Orthogonilise: Gram-Schmidt process '''
+  
 
   @staticmethod
   def ort(w,list1):
+    
+    ''' Orthogonilise: Gram-Schmidt process '''
+    
     for v in list1:
       w = w - torch.matmul(w.T,v)*v
       w = w/torch.norm(w)
     return w
 
-  '''Lancazos algorithm'''
+  
 
-  def lanczos(self,n_iter):  ### Returns V basis and T tridiagonal matrix
+  def lanczos(self,n_iter): 
+    ''' Lancazos algorithm, returns V basis and T tridiagonal matrix '''
                               
     v       = self.rand_vec()
     w_prime = self.JTVP(v)
@@ -296,15 +311,21 @@ class Jacobian(linalg.LinearOperator):
       w_list.append(w)
     return V, T
   
-def min_max(X): #X 2D array
+def min_max(X): 
+  '''min max'''
   x1_gen = X[:,0]
   x2_gen = X[:,1]
   return np.min(x1_gen),np.max(x2_gen),\
          np.min(x2_gen),np.max(x2_gen)
 
-'''vis function plots GAN 2D generated vs real points, with background coloured by discriminator output'''
+
+       
 
 def vis(G,D,X_train_save,z_fixed,device):
+  
+  '''vis function plots GAN 2D generated vs real points, with background coloured by discriminator output
+       D and G are discriminator and generator models '''
+  
   with torch.no_grad():
 
     fig = go.Figure()
