@@ -2,8 +2,7 @@ from model import R
 from data_loader import Mol_dataset
 import wandb
 import torch.nn as nn
-from torch import cat,no_grad,float32,flatten,device,save,manual_seed,backends,zeros,tensor
-from torch.utils.data import Subset
+from torch import float32,device,manual_seed,backends,zeros,tensor
 import torch.optim as optim
 import numpy as np
 import os
