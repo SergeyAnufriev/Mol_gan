@@ -1,4 +1,6 @@
+
 import torch
+from torch import autograd
 import wandb
 from scipy.sparse import linalg
 import numpy as np
@@ -10,6 +12,7 @@ from sklearn.metrics import r2_score,mean_absolute_error
 from matplotlib import pyplot as plt
 
 '''This module purpose is to analyse neural network properties and interaction between them in case'''
+
 
 activation = {}
 def get_activation(name):
@@ -114,7 +117,7 @@ def model_params_shift(model,vec,lambd):
 
 '''plot model loss along +-lambda*V'''
 
-def curvature(model,criterion,inputs,vec,targets,lams):
+def curvature(model,vec,lams):
   losses = []
   for lambd in lams:
     m = model_params_shift(model,vec,lambd)
@@ -389,3 +392,4 @@ def vis(G,D,X_train_save,z_fixed,device):
         height=700)
 
     return fig
+
