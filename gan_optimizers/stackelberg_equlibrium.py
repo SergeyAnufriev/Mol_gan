@@ -1,7 +1,4 @@
 import numpy as np
-import torch
-import math
-from torch.autograd import grad
 import matplotlib.pyplot as plt
 import os
 from scipy import linalg
