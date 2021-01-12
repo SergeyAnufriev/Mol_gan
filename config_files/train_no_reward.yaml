@@ -1,0 +1,37 @@
+program: train_no_reward.py
+method:  grid
+project: molecular_gan
+description : GAN molecular no reward
+parameters:
+  seed:
+    value: 42
+  h1_d:
+    value: 128
+  h2_d:
+    value: 64
+  h3_d:
+    value: 128
+  h4_d:
+    value: 64
+  h1_g:
+    value: 128
+  h2_g:
+    value: 256
+  h3_g:
+    value: 512
+  drop_out:
+    value: 0.1
+  temp:
+    value: 0.1
+  z_dim:
+    value: 32
+  LAMBDA:
+    value: 10.0
+  bz:
+    value: 64
+  epochs:
+    value: 5
+  lr_d:
+    values: [0.0001, 0.001]
+  lr_g:
+    values: [0.0001, 0.001]

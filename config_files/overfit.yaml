@@ -1,0 +1,20 @@
+program: Overfit_experiment.py
+method: grid
+metric:
+  goal: minimize
+  name: MSE
+parameters:
+  h1:
+    values: [128,256]
+  h2:
+    values: [64,128]
+  learning_rate:
+    values: [0.0001, 0.001, 0.1]
+  drop_out:
+    values: [0.1,0.2,0.4]
+  bz:
+    value: 64
+  n_iter:
+    value: 100
+  dataset:
+    values: [0,1,2,3,4]

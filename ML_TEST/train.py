@@ -64,6 +64,9 @@ def test(model, test_loader): #### over full test dataset average loss
     for a,x,r in test_loader:
       outputs    = model(a.to(cuda),x.to(cuda))
       test_loss += criterion(outputs, r.to(cuda))
+
+
+
     wandb.log({'Test_Loss':test_loss/(len(test_loader.dataset)/test_loader.batch_size)})
 
 '''grad_info function records per train batch gradients for each model parameter'''
