@@ -1,0 +1,22 @@
+
+program: long_epoch_test.py
+method: grid
+parameters:
+  h1:
+    values: [128,256]
+  h2:
+    values: [64,128]
+  h3:
+    value:
+      128
+  h4:
+    value:
+      64
+  learning_rate:
+    values: [0.0005, 0.001, 0.002]
+  drop_out:
+    values: [0.1,0.2,0.4]
+  bz:
+    value: 64
+  epochs:
+    value: 20

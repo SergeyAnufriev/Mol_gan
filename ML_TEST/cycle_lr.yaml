@@ -1,0 +1,30 @@
+program: cycle_triangle_lr.py
+method:  grid
+project: non_const_lr
+description : triangle cycle lr const lr_min lr_max var frequency
+parameters:
+  seed:
+    value: 42
+  h1:
+    value: 128
+  h2:
+    value: 64
+  h3:
+    value: 128
+  h4:
+    value: 64
+  drop_out:
+    value: 0.1
+  bz:
+    value: 64
+  epochs:
+    value: 20
+  lr_min:
+    value: 0.0001
+  lr_max:
+    value: 0.003
+  step_size:
+    values: [0.01,1.25,10,6,3]
+
+
+

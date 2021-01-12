@@ -1,13 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.nn.functional import one_hot
-from torch_geometric.nn import GlobalAttention
+from torch_geometric.nn import GlobalAttention,BatchNorm
 from torch.nn.parameter import Parameter
-
-print('useless code')
-
-'''This code is used to construct generative models '''
-
 
 
 def permute3D(A):
@@ -63,7 +58,7 @@ class Generator(nn.Module):
 
     #### Candidates to enforce A_sym = LL^T
 
-    def __init__(self,z_dim,N,T,Y,temp):
+    def __init__(self,z_dim,h1,h2,h3,N,T,Y,temp,drop_out):
       super(Generator, self).__init__()
 
       self.N = N
@@ -72,27 +67,31 @@ class Generator(nn.Module):
 
       self.temp = temp ### GambelSoftmax activation - temperature
 
-      self.lin1 = nn.Linear(z_dim,128)
-      self.lin2 = nn.Linear(128,256)
-      self.lin3 = nn.Linear(256,512)
+      self.lin1 = nn.Linear(z_dim,h1)
+      self.lin2 = nn.Linear(h1,h2)
+      self.lin3 = nn.Linear(h2,h3)
 
-      self.edges = nn.Linear(512,self.N*self.N*self.Y)
-      self.nodes = nn.Linear(512,self.N*self.T)
+      self.edges = nn.Linear(h3,self.N*self.N*self.Y)
+      self.nodes = nn.Linear(h3,self.N*self.T)
 
-      self.act   = nn.functional.gumbel_softmax
+      self.drop_out   = nn.Dropout(drop_out)
+      self.act        = nn.Tanh()
+      self.act_last   = nn.functional.gumbel_softmax
 
     def forward(self,x):
 
-        output      = self.lin3(self.lin2(self.lin1(x)))
+        x           = self.act(self.drop_out(self.lin1(x)))
+        x           = self.act(self.drop_out(self.lin2(x)))
+        output      = self.act(self.drop_out(self.lin3(x)))
 
-        nodes_logit = self.nodes(output).view(-1,self.N,self.T)
-        nodes       = self.act(nodes_logit,dim=-1,tau=self.temp,hard=True)
+        nodes_logit = self.drop_out(self.nodes(output)).view(-1,self.N,self.T)
+        nodes       = self.act_last(nodes_logit,dim=-1,tau=self.temp,hard=True)
 
-        edges_logit      = self.edges(output).view(-1,self.N,self.N,self.Y)
+        edges_logit      = self.drop_out(self.edges(output)).view(-1,self.N,self.N,self.Y)
         edges_logit_T    = torch.transpose(edges_logit,1,2)
         edges_logit      = 0.5*(edges_logit+edges_logit_T)
 
-        edges_logit      = self.act(edges_logit,dim=-1,tau=self.temp,hard=True)
+        edges_logit      = self.act_last(edges_logit,dim=-1,tau=self.temp,hard=True)
 
         edges = permute4D(edges_logit)
 
@@ -137,7 +136,7 @@ class nn_(torch.nn.Module):
   def __init__(self,in_channels,out_channels,drop_out):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels)
-    self.act  = nn.Tanh()
+    self.act  = nn.LeakyReLU()
     self.drop_out = nn.Dropout(drop_out)
 
   def forward(self,x):
@@ -180,25 +179,37 @@ class R(torch.nn.Module):
     self.lin4   = nn.Linear(h_3,h_4,bias=True)
     self.lin5   = nn.Linear(h_4,1,bias=True)
 
-    self.act1        = nn.Tanh()
-    self.act2        = nn.Tanh()
-    self.act3        = nn.Tanh()
-    self.act4        = nn.Tanh()
-    self.act5        = nn.Tanh()
+    self.act         = nn.LeakyReLU()
     self.act_last    = nn.Sigmoid()
 
     self.drop_out   = nn.Dropout(drop_out)
 
+    self.batch_conv = BatchNorm(9)
+
+    self.batch_lin1  = nn.BatchNorm1d(h_3)
+    self.batch_lin2  = nn.BatchNorm1d(h_4)
+
     
   def forward(self,A,x):
 
-    h_1    = self.act1(self.drop_out(self.conv1.forward(A,x)))
-    h_2    = self.act2(self.drop_out(self.conv2.forward(A,torch.cat((h_1,x),-1))))
-    h_3    = self.act3(self.agr.forward(torch.cat((h_2,x),-1)))
-    h_4    = self.act4(self.drop_out(self.lin3(h_3)))
-    h_5    = self.act5(self.drop_out(self.lin4(h_4)))
+    h_1    = self.act(self.drop_out(self.conv1.forward(A,x)))
+    h_1    = self.batch_conv(h_1)
+
+    h_2    = self.act(self.drop_out(self.conv2.forward(A,torch.cat((h_1,x),-1))))
+    h_2    = self.batch_conv(h_2)
+
+    h_3    = self.act(self.agr.forward(torch.cat((h_2,x),-1)))
+    h_3    = self.batch_lin1(h_3)
+
+    h_4    = self.act(self.drop_out(self.lin3(h_3)))
+    h_4    = self.batch_lin1(h_4)
+
+    h_5    = self.act(self.drop_out(self.lin4(h_4)))
+    h_5    = self.batch_lin2(h_5)
 
     scalar = self.act_last(self.drop_out(self.lin5(h_5)))
+
+    #scalar = self.drop_out(self.lin5(h_5))
 
     return scalar
 

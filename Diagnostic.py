@@ -8,10 +8,9 @@ from copy import deepcopy
 from scipy.sparse.linalg import eigs,eigsh
 import plotly.graph_objects as go
 from sklearn.metrics import r2_score,mean_absolute_error
+from matplotlib import pyplot as plt
 
 '''This module purpose is to analyse neural network properties and interaction between them in case'''
-
-
 
 
 activation = {}
@@ -46,6 +45,8 @@ def test(model,test_loader,criterion): #### over full test dataset average loss
     for a,x,r in test_loader:
       outputs    = model(a,x)
       test_loss += criterion(outputs, r)
+
+
     wandb.log({'Test_Loss':test_loss/(len(test_loader.dataset)/test_loader.batch_size)})
 
 
