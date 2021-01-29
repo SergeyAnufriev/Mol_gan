@@ -207,8 +207,8 @@ class R(torch.nn.Module):
     h_5    = self.act(self.drop_out(self.lin4(h_4)))
     h_5    = self.batch_lin2(h_5)
 
-    scalar = self.act_last(self.drop_out(self.lin5(h_5)))
+    #scalar = self.act_last(self.drop_out(self.lin5(h_5)))
 
-    #scalar = self.drop_out(self.lin5(h_5))
+    scalar = self.drop_out(self.lin5(h_5))
 
     return scalar
