@@ -117,7 +117,7 @@ def model_params_shift(model,vec,lambd):
 
 '''plot model loss along +-lambda*V'''
 
-def curvature(model,vec,lams):
+def curvature(model,vec,lams,criterion,inputs,targets):
   losses = []
   for lambd in lams:
     m = model_params_shift(model,vec,lambd)
