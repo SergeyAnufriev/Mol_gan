@@ -1,6 +1,7 @@
 from random import choice
 import torch
-
+from utils import A_x_to_mol
+from molecular_metrics import MolecularMetrics
 #### BFS #########################
 
 class Queue:
@@ -65,10 +66,10 @@ def subgraphs(adj_list):
   return subgraphs
 
 
-def node_to_dict(mat):
+def node_to_dict(mat,device):
   node_to_val = {}
   n,m = mat.size()
-  pad = torch.tensor([0]*(m-1) + [1]).type(torch.LongTensor)
+  pad = torch.tensor([0]*(m-1) + [1],dtype=torch.float32,device=device)
   for i in range(n):
     if all(mat[i,:] == pad):
       node_to_val[i] = 0
@@ -77,11 +78,11 @@ def node_to_dict(mat):
   return node_to_val
 
 
-def tens_to_adj_list(tens):
+def tens_to_adj_list(tens,device):
   n,_,m = tens.size()
   adj_l = [[] for _ in range(n)]
-  pad1 = torch.zeros(m).type(torch.float32)
-  pad2 = torch.tensor([0]*(m-1)+[1]).type(torch.float32)
+  pad1 = torch.zeros(m,dtype=torch.float32,device=device)
+  pad2 = torch.tensor([0]*(m-1)+[1],dtype=torch.int,device=device)
   for i in range(n):
     for j in range(n):
       con_ = tens[i,j,:]
@@ -104,10 +105,10 @@ def valid(subgraphs,dict_):
     return 0
 
 
-def valid_graph(A,x):
+def valid_graph(A,x,device):
 
-  adj_list   = tens_to_adj_list(A)  ## From Adjeccency tensor to adjecency list
-  dict_      = node_to_dict(x)      ## 1 if atom real, 0 empty node
+  adj_list   = tens_to_adj_list(A,device)  ## From Adjeccency tensor to adjecency list
+  dict_      = node_to_dict(x,device)      ## 1 if atom real, 0 empty node
   subgraphs_ = subgraphs(adj_list)  ## find all subgraphs by BFS algo
 
   if valid(subgraphs_,dict_) == 0:
@@ -116,3 +117,20 @@ def valid_graph(A,x):
     for G in subgraphs_:
       if all(dict_[x] != 0 for x in G): 
         return 1,A[G,:,:][:,G,:],x[G,:]
+
+
+def valid_compounds(A,X,device):
+
+    bz = A.size()[0]
+    mols = []
+    A,X  = A.detach(),X.detach()
+
+    for i in range(bz):
+        a,x = A[i,:,:,:],X[i,:,:]
+        v,_,_ = valid_graph(a,x,device)
+        if v == 0:
+            mols+=[None]
+        else:
+            mols+=[A_x_to_mol(a,x)]
+
+    return MolecularMetrics.valid_total_score(mols)

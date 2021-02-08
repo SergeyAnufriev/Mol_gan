@@ -7,8 +7,11 @@ import wandb
 from utils import sweep_to_dict,L2_norm
 from utils import wgan_dis,wgan_gen,grad_penalty
 import os
+from vizulise import plot2
+from valid import valid_compounds
 from rdkit import Chem
 from vizulise import plot2
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 '''Initialise parameters and data path'''
@@ -33,7 +36,7 @@ if torch.cuda.is_available():
 
 '''Initialise Models, Data and Optimizers'''
 
-data = DataLoader(Mol_dataset(dir_dataset),config.bz,shuffle=True)
+data = DataLoader(Mol_dataset(dir_dataset),config.bz,shuffle=True,drop_last=True)
 
 D = R(5,config.h1_d,config.h2_d,config.h3_d,config.h4_d,config.drop_out,device)
 G = Generator(config.z_dim,config.h1_g,config.h2_g,config.h3_g,9,5,5,config.temp,config.drop_out)
@@ -47,6 +50,8 @@ opt_G = torch.optim.Adam(G.parameters(), lr=config.lr_g,betas=(0.0,0.9))
 '''Training loop'''
 
 
+z_test             = torch.randn(5000,config.z_dim,device=device)
+
 
 for epoch in range(config.epochs):
     for i,(A,X,_) in enumerate(data):
@@ -59,12 +64,23 @@ for epoch in range(config.epochs):
 
         D_real, D_fake =  wgan_dis(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D)
 
+
         wandb.log({'D(real)':D_real})
         wandb.log({'D(fake)':D_fake})
         wandb.log({'D_Wloss':-D_real+D_fake})
 
         GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
         D_loss  =  -D_real+ D_fake + config.LAMBDA*GP
+
+
+
+        wandb.log({'D(real)':D_real})
+        wandb.log({'D(fake)':D_fake})
+        wandb.log({'D_Wloss':-D_real+D_fake})
+
+        GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
+        D_loss  =  -D_real+ D_fake + config.LAMBDA*GP
+
 
         wandb.log({'GP':GP})
         wandb.log({'D_Wloss_GP':D_loss})
@@ -93,10 +109,21 @@ for epoch in range(config.epochs):
             wandb.log({'Total_L2':total_norm})
             opt_G.step()
 
-            plot2(A_fake,X_fake)
+
+    '''Log chemical performance per epoch'''
+
+    z = torch.randn(config.bz,config.z_dim,device=device)
+    X_fake,A_fake = G(z)
+    plot2(A_fake,X_fake)
+    x,a = G(z_test)
+    wandb.log({'valid':valid_compounds(a,x,device)})
+
+
+         
 
 
     ''' save generator model at each epoch, to check its performance later'''
+
     PATH = os.path.join(run_loc,'G'+'_'+'epoch-{}.pt'.format(epoch))
     torch.save(G, PATH)
     wandb.save('*.pt')
