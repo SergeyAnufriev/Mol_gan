@@ -42,11 +42,19 @@ def A_x_to_mol(A,x):
   for i in non_empty_atoms:
     for j in non_empty_atoms:
       bond = array_to_bond(A[i,j,:])
-      if i>j and bond != None:
+      if i<j and bond != None:
         mol.AddBond(i,j,bond)
   for i in non_empty_atoms:
     mol.GetAtomWithIdx(i).SetAtomicNum(array_to_atom(x[i,:]))
-  return mol
+
+  try:
+      Chem.SanitizeMol(mol)
+      return mol
+  except:
+    return None
+
+
+
 
 
 
@@ -143,7 +151,7 @@ def wgan_gen(A_f,x_f,netD):
 '''GRADIENT PENALTY DISCRIMINATOR'''
 def grad_penalty(A_r,x_r,A_f,x_f,netD,device):
     
-    eps   = torch.rand(A_r.size()[0])
+    eps   = torch.rand(A_r.size()[0],device=device)
     eps_x = torch.unsqueeze(torch.unsqueeze(eps,-1),-1)
     eps_A = torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(eps,-1),-1),-1)
     
@@ -184,7 +192,7 @@ def L2_norm(model):
     total_norm = total_norm ** (1. / 2)
     return total_norm
                         
-
+'''
 def gradient_penalty(self, y, x):
     """Compute gradient penalty: (L2_norm(dy/dx) - 1)**2."""
     weight = torch.ones(y.size()).to(self.device)
@@ -199,7 +207,7 @@ def gradient_penalty(self, y, x):
     dydx_l2norm = torch.sqrt(torch.sum(dydx**2, dim=1))
     return torch.mean((dydx_l2norm-1)**2)
 
-'''
+
 x = torch.rand((32,4,5))
 
 print(x.norm(2, dim=(1,2))-1)
