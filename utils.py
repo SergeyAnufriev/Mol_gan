@@ -42,6 +42,7 @@ def A_x_to_mol(A,x):
   for i in non_empty_atoms:
     for j in non_empty_atoms:
       bond = array_to_bond(A[i,j,:])
+
       if i<j and bond != None:
         mol.AddBond(i,j,bond)
   for i in non_empty_atoms:
@@ -54,6 +55,13 @@ def A_x_to_mol(A,x):
     return None
 
 
+
+
+      if i>j and bond != None:
+        mol.AddBond(i,j,bond)
+  for i in non_empty_atoms:
+    mol.GetAtomWithIdx(i).SetAtomicNum(array_to_atom(x[i,:]))
+  return mol
 
 
 
@@ -207,6 +215,10 @@ def gradient_penalty(self, y, x):
     dydx_l2norm = torch.sqrt(torch.sum(dydx**2, dim=1))
     return torch.mean((dydx_l2norm-1)**2)
 
+
+
+
+'''
 
 x = torch.rand((32,4,5))
 

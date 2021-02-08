@@ -32,7 +32,9 @@ def plot2(A,X):
 
     '''Vizualise graphs with adjecency tensor and node feature matrix'''
 
+
     A,X = A.detach().cpu().numpy(), X.detach().cpu().numpy()
+
 
     bz = A.shape[0]
 
