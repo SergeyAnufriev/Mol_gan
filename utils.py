@@ -2,60 +2,44 @@ import torch
 from torch.autograd import grad
 from torch.autograd import Variable
 from torch.utils.data import DataLoader,random_split
+import torch.nn as nn
 import yaml
 import wandb
 import numpy as np
 from sklearn.metrics import r2_score
-from rdkit import Chem
 
-def array_to_atom(x,atom_set=['C','O','N','F']):
-  max_atoms = len(atom_set)
-  idx  = np.dot(x.numpy(),np.array(range(0,max_atoms+1))).astype(int)
-  if idx == max_atoms:
-    return 0
+
+def init_(type_):
+    def init_weights(m):
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+            if type_ == 'normal':
+                nn.init.normal(m.weight,0,0.02)
+            elif type_ == 'kaiming_normal':
+                nn.init.kaiming_normal_(m.weight)
+            elif type_ == 'xavier_uniform':
+                nn.init.xavier_uniform_(m.weight,gain=(2**0.5))
+            else:
+                m.weight.data.fill_(0)
+            m.bias.data.fill_(0)
+    return init_weights
+
+
+def JTVP(Y,X,V):
+  HTV = torch.autograd.grad(Y,X,
+    grad_outputs=V,allow_unused=True,retain_graph=True)[0]
+  if HTV is None:
+    return torch.zeros_like(X)
   else:
-    atom = Chem.rdchem.Atom(atom_set[idx])
-    return atom.GetAtomicNum()
-
-def array_to_bond(x):
-  if torch.sum(x).numpy() == 0:
-    return None
-  else:
-    idx = np.dot(x.numpy(),np.array(range(0,5))).astype(int)
-  return [Chem.rdchem.BondType.SINGLE,Chem.rdchem.BondType.DOUBLE,\
-            Chem.rdchem.BondType.TRIPLE,Chem.rdchem.BondType.AROMATIC,None][idx]
+    return HTV
 
 
-def A_x_to_mol(A,x):
-
-  '''Converst Adjecency tensor (A) and node feature matrix (X) to molecule'''
-
-  mol = Chem.RWMol()
-  n_atoms = x.size()[0]
-
-  non_empty_atoms = []
-  for i in range(n_atoms):
-    if x[i,:][-1].numpy() != 1:
-      mol.AddAtom(Chem.Atom(0))
-      non_empty_atoms.append(i)
-
-  for i in non_empty_atoms:
-    for j in non_empty_atoms:
-      bond = array_to_bond(A[i,j,:])
-      if i<j and bond != None:
-        mol.AddBond(i,j,bond)
-  for i in non_empty_atoms:
-    mol.GetAtomWithIdx(i).SetAtomicNum(array_to_atom(x[i,:]))
-
-  try:
-      Chem.SanitizeMol(mol)
-      return mol
-  except:
-    return None
-
-
-
-
+def grad_weight_info(model,n):
+    for name, param in model.named_parameters():
+        grad = list(torch.flatten(param.grad).detach().cpu().numpy())
+        w    = list(torch.flatten(param.data).detach().cpu().numpy())
+        wandb.log({'Gr'+'_'+n+'_'+name: wandb.Histogram(grad)})
+        wandb.log({'W'+'_'+n+'_'+name:wandb.Histogram(w)})
 
 
 def sweep_to_dict(dir):
@@ -122,9 +106,13 @@ def gan_loss_dis(A_r,x_r,A_f,x_f,netD):
     Loss_real = criterion(output_r,label_r)
 
     output_f  = netD(A_f.detach(),x_f.detach()).view(-1)
+
+    '''
+    output_f  = netD(A_f,x_f).view(-1)
+    '''
     Loss_fake = criterion(output_f,label_f)
 
-    return -Loss_real+Loss_fake
+    return Loss_real+Loss_fake
 
 '''DCGAN GENERATOR LOSS'''
 def gan_loss_gen(A_f,x_f,netD):
@@ -134,12 +122,15 @@ def gan_loss_gen(A_f,x_f,netD):
     output_f = netD(A_f,x_f).view(-1)
     Loss_gen = criterion(output_f,label_r)
 
-    return -Loss_gen
+    return Loss_gen
 
 '''WGAN LOSS DISCRIMINATOR'''
 def wgan_dis(A_r,x_r,A_f,x_f,netD):
 
   Loss_real = netD(A_r,x_r).mean()
+  '''allow gradients for second order methods'''
+
+  #Loss_fake = netD(A_f,x_f).mean()
   Loss_fake = netD(A_f.detach(),x_f.detach()).mean()
 
   return Loss_real, Loss_fake

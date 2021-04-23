@@ -5,10 +5,12 @@ import torch
 import numpy as np
 import wandb
 from utils import sweep_to_dict,L2_norm
-from utils import wgan_dis,wgan_gen,grad_penalty
+from utils import wgan_dis,wgan_gen,grad_weight_info,init_,grad_penalty,clip_weight
 import os
 from vizulise import plot2
 from valid import valid_compounds
+
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 '''Initialise parameters and data path'''
@@ -20,33 +22,40 @@ wandb.init(config=sweep_to_dict(dir_config))
 config  = wandb.config
 run_loc = wandb.run.dir
 
-
 '''Fix random seed'''
-
 torch.manual_seed(config.seed)
 np.random.seed(config.seed)
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
 
-'''torch.random.seed(config.seed)'''
-
 '''Initialise Models, Data and Optimizers'''
 
 data = DataLoader(Mol_dataset(dir_dataset),config.bz,shuffle=True,drop_last=True)
 
-D = R(5,config.h1_d,config.h2_d,config.h3_d,config.h4_d,config.drop_out,device)
-G = Generator(config.z_dim,config.h1_g,config.h2_g,config.h3_g,9,5,5,config.temp,config.drop_out)
+D = R(config,device)
+G = Generator(config,9,5,5)
+
+'''apply weight initialisation to all layers'''
+
+D.apply(init_(config.weight_init_D))
+G.apply(init_(config.weight_init_G))
+
+if config.Spectral_Norm_D == True:
+    D.turn_on_spectral_norm()
+    print('spectral hook applied')
 
 D.to(device)
 G.to(device)
 
-opt_D = torch.optim.Adam(D.parameters(), lr=config.lr_d,betas=(0.0,0.9))
-opt_G = torch.optim.Adam(G.parameters(), lr=config.lr_g,betas=(0.0,0.9))
+opt_D  = torch.optim.RMSprop(D.parameters(),lr=config.lr_d)
+opt_G  = torch.optim.RMSprop(G.parameters(),lr=config.lr_g)
 
-'''Training loop'''
+'''K - frequency loading valid calculations'''
+z_test = torch.randn(5000,config.z_dim,device=device)
+k      = len(data)/20
+GP     = 0
 
-z_test             = torch.randn(5000,config.z_dim,device=device)
 
 for epoch in range(config.epochs):
     for i,(A,X,_) in enumerate(data):
@@ -54,28 +63,40 @@ for epoch in range(config.epochs):
         '''Train discriminator'''
 
         opt_D.zero_grad()
-        z = torch.randn(config.bz,config.z_dim).to(device)
-        X_fake,A_fake = G(z)
+        z              = torch.randn(config.bz,config.z_dim).to(device)
+        X_fake,A_fake  = G(z)
+        D_real,D_fake  = wgan_dis(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D)
+        D_loss         = D_fake-D_real
 
-        D_real, D_fake =  wgan_dis(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D)
+        '''If loss with gradient penalty'''
+
+        if config.Lambda !=0:
+            GP = grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
+            wandb.log({'GP':GP})
+            D_loss += config.Lambda*GP
+            print('Gradient penalty applied')
+        else:
+            print('No gradient penalty')
+
+
+        D_loss.backward()
+
+        '''Log discriminator stats'''
 
         wandb.log({'D(real)':D_real})
         wandb.log({'D(fake)':D_fake})
-        wandb.log({'D_Wloss':-D_real+D_fake})
-
-        GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
-        D_loss  =  -D_real+ D_fake + config.LAMBDA*GP
-
-        wandb.log({'GP':GP})
-        wandb.log({'D_Wloss_GP':D_loss})
-        D_loss.backward()
-
+        wandb.log({'D_Wloss':D_loss})
         D_norm = L2_norm(D)
         wandb.log({'D_grad_L2':D_norm})
+        grad_weight_info(D,'D')
 
+        '''optimizer d step'''
         opt_D.step()
 
-        '''n_crtitic default = 5'''
+        if config.clip_value !=0:
+            clip_weight(D,config.clip_value)
+        else:
+            print('no weight clipping')
 
         if i%config.n_critic == 0 and i !=0:
 
@@ -85,24 +106,30 @@ for epoch in range(config.epochs):
             z             = torch.randn(config.bz,config.z_dim).to(device)
             X_fake,A_fake = G(z)
             G_loss        = wgan_gen(A_fake.to(device),X_fake.to(device),D)
-            wandb.log({'G_loss':G_loss})
             G_loss.backward()
+
+            '''Log Generator statistics'''
+
+            wandb.log({'G_loss':G_loss})
             G_norm = L2_norm(G)
             wandb.log({'G_grad_L2':G_norm})
             total_norm = (G_norm**2+D_norm**2)** (1. / 2)
             wandb.log({'Total_L2':total_norm})
+            grad_weight_info(G,'G')
+
             opt_G.step()
 
-    '''Log chemical performance per epoch'''
+        if i%k==0:
 
-    z = torch.randn(config.bz,config.z_dim,device=device)
-    X_fake,A_fake = G(z)
-    plot2(A_fake,X_fake)
-    x,a = G(z_test)
-    wandb.log({'valid':valid_compounds(a,x,device)})
+            z = torch.randn(config.bz,config.z_dim,device=device)
+            X_fake,A_fake = G(z)
+            plot2(A_fake,X_fake)
+            x,a = G(z_test)
+            wandb.log({'valid':valid_compounds(a,x,device)})
 
     PATH = os.path.join(run_loc,'G'+'_'+'epoch-{}.pt'.format(epoch))
-    torch.save(G, PATH)
+    torch.save(G.state_dict(), PATH)
     wandb.save('*.pt')
+
 
 
