@@ -35,8 +35,6 @@ parameters:
     value: false
   weight_init_D:
     value: 'kaiming_normal'
-  weight_init_last_D:
-    value: 'kaiming_normal'
   n_critic:
     value: 5
   h1_g:
@@ -50,8 +48,6 @@ parameters:
   nonlinearity_G:
     value: 'tanh'
   weight_init_G:
-    value: 'xavier_normal'
-  weight_init_last_G:
     value: 'xavier_normal'
   temp:
     value: 0.1

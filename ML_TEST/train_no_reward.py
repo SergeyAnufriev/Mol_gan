@@ -4,11 +4,11 @@ from torch.utils.data import DataLoader
 import torch
 import numpy as np
 import wandb
-from utils import sweep_to_dict,L2_norm
-from utils import wgan_dis,wgan_gen,grad_penalty
+from utils import sweep_to_dict,L2_norm,wgan_dis,wgan_gen,grad_penalty,weight_init
 import os
 from vizulise import plot2
 from valid import valid_compounds
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 '''Initialise parameters and data path'''
@@ -19,7 +19,6 @@ dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
 wandb.init(config=sweep_to_dict(dir_config))
 config  = wandb.config
 run_loc = wandb.run.dir
-
 
 '''Fix random seed'''
 
@@ -35,11 +34,18 @@ if torch.cuda.is_available():
 
 data = DataLoader(Mol_dataset(dir_dataset),config.bz,shuffle=True,drop_last=True)
 
-D = R(5,config.h1_d,config.h2_d,config.h3_d,config.h4_d,config.drop_out,device)
-G = Generator(config.z_dim,config.h1_g,config.h2_g,config.h3_g,9,5,5,config.temp,config.drop_out)
+D = R(config,device)
+G = Generator(config,9,5,5)
+
+D.apply(weight_init(config.weight_init_D))
+G.apply(weight_init(config.weight_init_G))
 
 D.to(device)
 G.to(device)
+
+'''Turn on discriminator spectral normalisation'''
+if config.Spectral_Norm_D == True:
+    D.turn_on_spectral_norm()
 
 opt_D = torch.optim.Adam(D.parameters(), lr=config.lr_d,betas=(0.0,0.9))
 opt_G = torch.optim.Adam(G.parameters(), lr=config.lr_g,betas=(0.0,0.9))
@@ -55,21 +61,24 @@ for epoch in range(config.epochs):
 
         opt_D.zero_grad()
         z = torch.randn(config.bz,config.z_dim).to(device)
-        X_fake,A_fake = G(z)
+        X_fake,A_fake  = G(z)
+        D_real, D_fake = wgan_dis(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D)
+        D_loss = D_fake - D_real
 
-        D_real, D_fake =  wgan_dis(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D)
+        '''apply gradient penalty to loss if WGAN-GP'''
 
-        wandb.log({'D(real)':D_real})
-        wandb.log({'D(fake)':D_fake})
-        wandb.log({'D_Wloss':-D_real+D_fake})
+        if config.LAMBDA !=0:
+            GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
+            wandb.log({'GP':GP})
+            D_loss  += config.LAMBDA*GP
 
-        GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
-        D_loss  =  -D_real+ D_fake + config.LAMBDA*GP
-
-        wandb.log({'GP':GP})
-        wandb.log({'D_Wloss_GP':D_loss})
         D_loss.backward()
 
+        '''Log discriminator statistics'''
+
+        wandb.log({'D_Wloss':D_loss})
+        wandb.log({'D(real)':D_real})
+        wandb.log({'D(fake)':D_fake})
         D_norm = L2_norm(D)
         wandb.log({'D_grad_L2':D_norm})
 
@@ -85,12 +94,17 @@ for epoch in range(config.epochs):
             z             = torch.randn(config.bz,config.z_dim).to(device)
             X_fake,A_fake = G(z)
             G_loss        = wgan_gen(A_fake.to(device),X_fake.to(device),D)
-            wandb.log({'G_loss':G_loss})
             G_loss.backward()
+
+            '''Log geneerator statistics'''
+
+            wandb.log({'G_loss':G_loss})
             G_norm = L2_norm(G)
             wandb.log({'G_grad_L2':G_norm})
             total_norm = (G_norm**2+D_norm**2)** (1. / 2)
             wandb.log({'Total_L2':total_norm})
+
+
             opt_G.step()
 
     '''Log chemical performance per epoch'''

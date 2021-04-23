@@ -7,6 +7,27 @@ import wandb
 import numpy as np
 from sklearn.metrics import r2_score
 from rdkit import Chem
+import torch.nn as nn
+
+
+def weight_init(type_):
+    def weight(m):
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+            if type_ == 'normal':
+                m.weight.data.normal_(0.0, 0.02)
+            elif type_ == 'xavier_normal':
+                nn.init.xavier_normal_(m)
+            elif type_ == 'xavier_uniform':
+                nn.init.xavier_uniform_(m,gain=(2**0.5))
+            elif type_ == 'kaiming_normal':
+                nn.init.kaiming_normal(m,mode='fan_out', nonlinearity='leaky_relu')
+            elif type_ == 'default':
+                nn.init.uniform()
+            else:
+                m.weight.data.fill_(0)
+        m.bias.data.fill_(0)
+    return weight
 
 def array_to_atom(x,atom_set=['C','O','N','F']):
   max_atoms = len(atom_set)
