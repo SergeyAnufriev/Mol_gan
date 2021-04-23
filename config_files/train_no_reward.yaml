@@ -1,10 +1,24 @@
 program: C:\Users\zcemg08\Documents\GitHub\Mol_gan\ML_TEST\train_no_reward.py
 method:  grid
-project: molecular_gan
+project: dcgan
 description : GAN molecular no reward
 parameters:
   seed:
     value: 42
+  Lambda:
+    value: 0
+  clip_value:
+    value: 0
+  z_dim:
+    value: 64
+  drop_out:
+    value: 0.1
+  bz:
+    value: 64
+  epochs:
+    value: 10
+  loss:
+    value: 'wgan'
   h1_d:
     value: 128
   h2_d:
@@ -13,6 +27,16 @@ parameters:
     value: 128
   h4_d:
     value: 64
+  nonlinearity_D:
+    value: 'relu'
+  Spectral_Norm_D:
+    value: True
+  batch_norm_D:
+    value: false
+  weight_init_D:
+    value: 'kaiming_normal'
+  n_critic:
+    value: 5
   h1_g:
     value: 128
   h2_g:
@@ -21,31 +45,17 @@ parameters:
     value: 512
   batch_norm_G:
     value: false
-  batch_norm_D:
-    value: true
   nonlinearity_G:
-    value: 'Tanh'
-  nonlinearity_D:
-    value: 'LeakyRelu'
-  drop_out:
-    value: 0.1
+    value: 'tanh'
+  weight_init_G:
+    value: 'xavier_normal'
   temp:
     value: 0.1
-  z_dim:
-    value: 32
-  LAMBDA:
-    value: 10.0
-  n_critic:
-    value: 5
-  bz:
-    value: 64
-  epochs:
-    value: 5
-  eps:
-    value: 0.0001
   optimizer:
-    value: 'adam'
+    value: 'RMS'
+  grad_correction:
+    value: false
   lr_d:
-    values: [0.0001, 0.001]
+    values: [0.001, 0.0001]
   lr_g:
-    values: [0.0001, 0.001]
+    values: [0.001, 0.0001]

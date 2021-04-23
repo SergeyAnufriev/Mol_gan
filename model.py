@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.nn.functional import one_hot
-from torch_geometric.nn import GlobalAttention,BatchNorm
-from torch.nn.parameter import Parameter
+from torch_geometric.nn import GlobalAttention
 
+activation = {'tanh':nn.Tanh(),'relu':nn.LeakyReLU(),'sigmoid':nn.Sigmoid()}
 
 def permute3D(A):
 
@@ -25,23 +25,6 @@ def permute4D(A):
   return A_new
 
 
-'''A_mat takes graph represented by torch_geometric class and outputs adjecency tensor A,
-   WHERE A[i,j,:] = type of connection between nodes i and j'''
-
-def A_mat(data):   ### data to one-hot-encode adjacency tensor
-  edge_type  = data.edge_attr
-  edge_type_ = one_hot(edge_type)
-  n_nodes    = data.num_nodes
-  adj_mat    = torch.zeros((n_nodes,n_nodes,len(torch.unique(edge_type))))
-
-  edge_index = data.edge_index
-  for i in range(data.num_edges):
-    k, m = edge_index[0,i],edge_index[1,i]
-    adj_mat[k,m,:] = edge_type_[i,:]
-
-  return adj_mat.to(dtype = torch.float32)
-
-
 def to_list(bz,n_nodes):
   final_list = [0]*n_nodes
   for i in range(1,bz):
@@ -58,65 +41,77 @@ class Generator(nn.Module):
 
     #### Candidates to enforce A_sym = LL^T
 
-    def __init__(self,z_dim,h1,h2,h3,N,T,Y,temp,drop_out):
+    def __init__(self,config,N,T,Y):
       super(Generator, self).__init__()
 
       self.N = N
       self.T = T
       self.Y = Y
 
-      self.temp = temp ### GambelSoftmax activation - temperature
+      self.temp = config.temp ### GambelSoftmax activation - temperature
 
-      self.lin1 = nn.Linear(z_dim,h1)
-      self.lin2 = nn.Linear(h1,h2)
-      self.lin3 = nn.Linear(h2,h3)
+      self.lin1 = nn.Linear(config.z_dim,config.h1_g)
+      self.lin2 = nn.Linear(config.h1_g,config.h2_g)
+      self.lin3 = nn.Linear(config.h2_g,config.h3_g)
 
-      self.edges = nn.Linear(h3,self.N*self.N*self.Y)
-      self.nodes = nn.Linear(h3,self.N*self.T)
+      self.edges = nn.Linear(config.h3_g,self.N*self.N*self.Y)
+      self.nodes = nn.Linear(config.h3_g,self.N*self.T)
 
-      self.drop_out   = nn.Dropout(drop_out)
-      self.act        = nn.Tanh()
-      self.act_last   = nn.functional.gumbel_softmax
+      self.drop_out   = nn.Dropout(config.drop_out)
+
+      self.act_       = activation[config.nonlinearity_G]
+
+      self.act_nodes  = nn.functional.gumbel_softmax
+      self.act_edges  = nn.functional.gumbel_softmax
+
 
     def forward(self,x):
 
-        x           = self.act(self.drop_out(self.lin1(x)))
-        x           = self.act(self.drop_out(self.lin2(x)))
-        output      = self.act(self.drop_out(self.lin3(x)))
+        x           = self.act_(self.drop_out(self.lin1(x)))
+        x           = self.act_(self.drop_out(self.lin2(x)))
+        output      = self.act_(self.drop_out(self.lin3(x)))
 
         nodes_logit = self.drop_out(self.nodes(output)).view(-1,self.N,self.T)
-        nodes       = self.act_last(nodes_logit,dim=-1,tau=self.temp,hard=True)
+        nodes       = self.act_nodes(nodes_logit,dim=-1,tau=self.temp,hard=True)
 
         edges_logit      = self.drop_out(self.edges(output)).view(-1,self.N,self.N,self.Y)
         edges_logit_T    = torch.transpose(edges_logit,1,2)
         edges_logit      = 0.5*(edges_logit+edges_logit_T)
-
-        edges_logit      = self.act_last(edges_logit,dim=-1,tau=self.temp,hard=True)
-
-        edges = permute4D(edges_logit)
+        edges_logit      = self.act_edges(edges_logit,dim=-1,tau=self.temp,hard=True)
+        edges            = permute4D(edges_logit)
 
         return  nodes, edges
     
 '''CONVOLUTION RELATIONAL GCN OPERATOR'''
 
 class Convolve(nn.Module):
-    def __init__(self,in_channels,out_channels,n_relations,device):
-      super(Convolve,self).__init__()
+    def __init__(self,in_channels,out_channels,device):
+        super(Convolve,self).__init__()
 
-      self.weight     = Parameter(nn.init.xavier_uniform_(torch.empty(in_channels,out_channels,n_relations), gain=1.0))
-      self.lin        = nn.Linear(in_channels,out_channels,bias=True)
-      self.device     = device
+        self.root         = nn.Linear(in_channels,out_channels,bias=True)
+
+        self.single_      = nn.Linear(in_channels,out_channels,bias=True)
+        self.double_      = nn.Linear(in_channels,out_channels,bias=True)
+        self.triple_      = nn.Linear(in_channels,out_channels,bias=True)
+        self.aromat_      = nn.Linear(in_channels,out_channels,bias=True)
+
+        self.device       = device
 
     def forward(self,A,x):
 
-      A        = A[:,:,:,:-1]
-      sum_     = torch.sum(A,dim=2)
-      norm     = 1./(sum_ + torch.full(sum_.size(),1e-7,device=self.device))  ## look for analytical solution
-      A_new    = torch.einsum('sijcd,sicd->sijcd',A.unsqueeze(4),norm.unsqueeze(3))
-      Theta_ij = torch.einsum('abc,sijcd->sijabd',self.weight,A_new).squeeze(-1)
-      x_new    = torch.einsum('sja,sijab->sib',x,Theta_ij) + self.lin(x)
+        A        = A[:,:,:,:-1]
+        sum_     = torch.sum(A,dim=2)
+        norm     = 1./(sum_ + torch.full(sum_.size(),1e-7,device=self.device))  ## look for analytical solution
+        A_new    = torch.einsum('sijcd,sicd->sijcd',A.unsqueeze(4),norm.unsqueeze(3))
 
-      return x_new
+        X_new    = torch.cat([self.single_(x).unsqueeze(dim=1),\
+                              self.double_(x).unsqueeze(dim=1),\
+                              self.triple_(x).unsqueeze(dim=1),\
+                              self.aromat_(x).unsqueeze(dim=1)],dim=1)
+
+        X_new    = torch.einsum('scja,sijcd->sia',X_new,A_new)   + self.root(x)
+
+        return X_new
 
 
 '''gate_nn computes Attention score during Global aggregation'''
@@ -136,16 +131,14 @@ class nn_(torch.nn.Module):
   def __init__(self,in_channels,out_channels,drop_out):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels)
-    self.act  = nn.LeakyReLU()
     self.drop_out = nn.Dropout(drop_out)
 
   def forward(self,x):
-    return self.act(self.drop_out(self.lin2(x)))
+    return self.drop_out(self.lin2(x))
 
 
 ######## Combines each node represenations from nn_ and sums by 
 ######## gate_nn attention scores #############################
-
 
 class Aggregate(torch.nn.Module):
     def __init__(self,gate_nn,nn,device):
@@ -166,49 +159,93 @@ class Aggregate(torch.nn.Module):
 
 '''Rewrard and discriminator network class'''
 
+def spec_norm(m,type):
+    if m.__class__.__name__ == 'Linear':
+        if type == True:
+            nn.utils.spectral_norm(m)
+        else:
+            nn.utils.remove_spectral_norm(m)
+
+
 class R(torch.nn.Module):
-  def __init__(self,in_channels,h_1,h_2,h_3,h_4,drop_out,device):
+  def __init__(self,config,device):
     super(R,self).__init__()
 
-    self.conv1  = Convolve(in_channels,h_1,4,device)
-    self.conv2  = Convolve(h_1+in_channels,h_2,4,device)
+    self.spectral_norm_mode = False
+    self.loss_type          = config.loss
+    self.drop_out           = nn.Dropout(config.drop_out)
 
-    self.agr    = Aggregate(gate_nn(h_2+in_channels,drop_out),nn_(h_2+in_channels,h_3,drop_out),device)
+    self.conv1  = Convolve(5,config.h1_d,device)
+    self.conv2  = Convolve(config.h1_d+5,config.h2_d,device)
 
-    self.lin3   = nn.Linear(h_3,h_3,bias=True)
-    self.lin4   = nn.Linear(h_3,h_4,bias=True)
-    self.lin5   = nn.Linear(h_4,1,bias=True)
+    self.agr    = Aggregate(gate_nn(config.h2_d+5,config.drop_out),nn_(config.h2_d+5,config.h3_d,config.drop_out),device)
 
-    self.act         = nn.LeakyReLU()
-    self.act_last    = nn.Sigmoid()
+    self.linear = nn.Sequential(nn.Linear(config.h3_d,config.h3_d,bias=True),
+                                activation[config.nonlinearity_D],
+                                nn.Linear(config.h3_d,config.h4_d,bias=True),
+                                activation[config.nonlinearity_D],
+                                nn.Linear(config.h4_d,1,bias=True))
 
-    self.drop_out   = nn.Dropout(drop_out)
-
-    self.batch_conv = BatchNorm(9)
-
-    self.batch_lin1  = nn.BatchNorm1d(h_3)
-    self.batch_lin2  = nn.BatchNorm1d(h_4)
-
-    
   def forward(self,A,x):
 
-    h_1    = self.act(self.drop_out(self.conv1.forward(A,x)))
-    h_1    = self.batch_conv(h_1)
+    '''Convolution layers'''
+    h_1    = self.act_(self.drop_out(self.conv1(A,x)))
+    h_2    = self.act_(self.drop_out(self.conv2(A,torch.cat((h_1,x),-1))))
 
-    h_2    = self.act(self.drop_out(self.conv2.forward(A,torch.cat((h_1,x),-1))))
-    h_2    = self.batch_conv(h_2)
+    '''Aggregate layer'''
+    h_3    = self.act_(self.agr.forward(torch.cat((h_2,x),-1)))
 
-    h_3    = self.act(self.agr.forward(torch.cat((h_2,x),-1)))
-    h_3    = self.batch_lin1(h_3)
+    '''Dense layers'''
+    scalar = self.linear(h_3)
 
-    h_4    = self.act(self.drop_out(self.lin3(h_3)))
-    h_4    = self.batch_lin1(h_4)
-
-    h_5    = self.act(self.drop_out(self.lin4(h_4)))
-    h_5    = self.batch_lin2(h_5)
-
-    #scalar = self.act_last(self.drop_out(self.lin5(h_5)))
-
-    scalar = self.drop_out(self.lin5(h_5))
+    if self.loss_type == 'GAN':
+        scalar = activation['sigmoid'](scalar)
 
     return scalar
+
+
+  def turn_on_spectral_norm(self):
+
+      if self.spectral_norm_mode is not None:
+          assert self.spectral_norm_mode is False, "can't apply spectral_norm. It is already applied"
+
+      for m in self.conv1.children():
+          spec_norm(m,True)
+
+      for m in self.conv2.children():
+          spec_norm(m,True)
+
+      for m in self.agr.agg.gate_nn.children():
+          spec_norm(m,True)
+
+      for m in self.agr.agg.nn.children():
+          spec_norm(m,True)
+
+      for m in self.linear.children():
+          spec_norm(m,True)
+
+      self.spectral_norm_mode = True
+
+
+  def turn_off_spectral_norm(self):
+
+      if self.spectral_norm_mode is not None:
+            assert self.spectral_norm_mode is True, \
+                "can't remove spectral_norm. It is not applied"
+
+      for m in self.conv1.children():
+          spec_norm(m,False)
+
+      for m in self.conv2.children():
+          spec_norm(m,False)
+
+      for m in self.agr.agg.gate_nn.children():
+          spec_norm(m,False)
+
+      for m in self.agr.agg.nn.children():
+          spec_norm(m,False)
+
+      for m in self.linear.children():
+          spec_norm(m,False)
+
+      self.spectral_norm_mode = False
