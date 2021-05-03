@@ -232,6 +232,13 @@ class LSD_Adam(torch.optim.Optimizer):
                 vjp = vjps[index]
                 if p.grad is None:
                     continue
+                print('start')
+                print(p.grad.data)
+                print(p.grad.data.size())
+                print( group['alpha'])
+                print(vjp)
+                print(vjp.size())
+                print('end')
                 grad = p.grad.data - group['alpha'] * vjp
                 if grad.is_sparse:
                     raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')

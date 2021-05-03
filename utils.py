@@ -6,78 +6,43 @@ import yaml
 import wandb
 import numpy as np
 from sklearn.metrics import r2_score
-from rdkit import Chem
 import torch.nn as nn
 
 
+def JTVP(X,Y,V):
+    '''Jacobian vector product where X is function
+    to take derivative with respect to Y
+    and V is the vector'''
+    '''returns <(dx/dy)T,V>'''
+
+    HTVP =torch.autograd.grad(
+            X, Y,
+            grad_outputs=V,allow_unused=True,retain_graph=True)[0]
+    if HTVP is None:
+        return torch.zeros_like(Y)
+    else:
+        return HTVP
+
+
 def weight_init(type_):
+    '''Initialise linear layers weights'''
+    '''Returns weight function for model.apply(weight function)'''
     def weight(m):
         classname = m.__class__.__name__
         if classname.find('Linear') != -1:
             if type_ == 'normal':
                 m.weight.data.normal_(0.0, 0.02)
             elif type_ == 'xavier_normal':
-                nn.init.xavier_normal_(m)
+                nn.init.xavier_normal_(m.weight)
             elif type_ == 'xavier_uniform':
-                nn.init.xavier_uniform_(m,gain=(2**0.5))
+                nn.init.xavier_uniform_(m.weight,gain=(2**0.5))
             elif type_ == 'kaiming_normal':
-                nn.init.kaiming_normal(m,mode='fan_out', nonlinearity='leaky_relu')
-            elif type_ == 'default':
-                nn.init.uniform()
+                nn.init.kaiming_normal(m.weight)
             else:
                 m.weight.data.fill_(0)
-        m.bias.data.fill_(0)
+            if m.bias is not None:
+                m.bias.data.fill_(0)
     return weight
-
-def array_to_atom(x,atom_set=['C','O','N','F']):
-  max_atoms = len(atom_set)
-  idx  = np.dot(x.numpy(),np.array(range(0,max_atoms+1))).astype(int)
-  if idx == max_atoms:
-    return 0
-  else:
-    atom = Chem.rdchem.Atom(atom_set[idx])
-    return atom.GetAtomicNum()
-
-def array_to_bond(x):
-  if torch.sum(x).numpy() == 0:
-    return None
-  else:
-    idx = np.dot(x.numpy(),np.array(range(0,5))).astype(int)
-  return [Chem.rdchem.BondType.SINGLE,Chem.rdchem.BondType.DOUBLE,\
-            Chem.rdchem.BondType.TRIPLE,Chem.rdchem.BondType.AROMATIC,None][idx]
-
-
-def A_x_to_mol(A,x):
-
-  '''Converst Adjecency tensor (A) and node feature matrix (X) to molecule'''
-
-  mol = Chem.RWMol()
-  n_atoms = x.size()[0]
-
-  non_empty_atoms = []
-  for i in range(n_atoms):
-    if x[i,:][-1].numpy() != 1:
-      mol.AddAtom(Chem.Atom(0))
-      non_empty_atoms.append(i)
-
-  for i in non_empty_atoms:
-    for j in non_empty_atoms:
-      bond = array_to_bond(A[i,j,:])
-      if i<j and bond != None:
-        mol.AddBond(i,j,bond)
-  for i in non_empty_atoms:
-    mol.GetAtomWithIdx(i).SetAtomicNum(array_to_atom(x[i,:]))
-
-  try:
-      Chem.SanitizeMol(mol)
-      return mol
-  except:
-    return None
-
-
-
-
-
 
 def sweep_to_dict(dir):
 
@@ -131,9 +96,8 @@ criterion = torch.nn.BCEWithLogitsLoss()
 '''this file collects GAN losses functions'''
 
 
-
-'''DCGAN DISCRIMINATOR LOSS'''
 def gan_loss_dis(A_r,x_r,A_f,x_f,netD):
+    '''DCGAN DISCRIMINATOR LOSS'''
 
     b_size   = x_f.size()[0]
     label_r  = torch.full((b_size,), real_label, dtype=torch.float)
@@ -142,13 +106,14 @@ def gan_loss_dis(A_r,x_r,A_f,x_f,netD):
     output_r  = netD(A_r,x_r).view(-1)
     Loss_real = criterion(output_r,label_r)
 
-    output_f  = netD(A_f.detach(),x_f.detach()).view(-1)
+    output_f  = netD(A_f,x_f).view(-1)
     Loss_fake = criterion(output_f,label_f)
 
     return -Loss_real+Loss_fake
 
-'''DCGAN GENERATOR LOSS'''
 def gan_loss_gen(A_f,x_f,netD):
+
+    '''DCGAN GENERATOR LOSS'''
 
     b_size   = x_f.size()[0]
     label_r  = torch.full((b_size,), real_label, dtype=torch.float)
@@ -157,16 +122,21 @@ def gan_loss_gen(A_f,x_f,netD):
 
     return -Loss_gen
 
-'''WGAN LOSS DISCRIMINATOR'''
+
 def wgan_dis(A_r,x_r,A_f,x_f,netD):
+
+  '''WGAN LOSS DISCRIMINATOR'''
 
   Loss_real = netD(A_r,x_r).mean()
   Loss_fake = netD(A_f.detach(),x_f.detach()).mean()
 
   return Loss_real, Loss_fake
 
-'''WGAN LOSS GENERATOR'''
+
 def wgan_gen(A_f,x_f,netD):
+
+  '''WGAN LOSS GENERATOR'''
+
   return -netD(A_f,x_f).mean()
 
 '''GRADIENT PENALTY DISCRIMINATOR'''
@@ -206,54 +176,14 @@ def clip_weight(model,clip_value):
 
 
 def L2_norm(model):
+    '''Model gradients L2 norm'''
+
     total_norm =0
     for p in model.parameters():
         param_norm = p.grad.data.norm(2)
         total_norm += param_norm.item() ** 2
     total_norm = total_norm ** (1. / 2)
     return total_norm
-                        
-'''
-def gradient_penalty(self, y, x):
-    """Compute gradient penalty: (L2_norm(dy/dx) - 1)**2."""
-    weight = torch.ones(y.size()).to(self.device)
-    dydx = torch.autograd.grad(outputs=y,
-                                   inputs=x,
-                                   grad_outputs=weight,
-                                   retain_graph=True,
-                                   create_graph=True,
-                                   only_inputs=True)[0]
-
-    dydx = dydx.view(dydx.size(0), -1)
-    dydx_l2norm = torch.sqrt(torch.sum(dydx**2, dim=1))
-    return torch.mean((dydx_l2norm-1)**2)
-
-
-x = torch.rand((32,4,5))
-
-print(x.norm(2, dim=(1,2))-1)
-
-y = x.view(x.size(0),-1)
-
-print(y.size())
-print(torch.sqrt(torch.sum(y**2, dim=1)))
-
-X = torch.rand(5,10,30)
-
-X1 = X[:2,:,:]
-
-X2 = X[2:,:,:]
-
-print(X.norm())
-
-print((X1.norm()**2+X2.norm()**2)**(1./2))
-print(X.size(),X1.size(),X2.size())
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(Variable(torch.tensor([3.,4.])).to(device))
-'''
-
-
 
 
 

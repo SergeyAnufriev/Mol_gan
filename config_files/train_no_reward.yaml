@@ -1,16 +1,61 @@
 program: C:\Users\zcemg08\Documents\GitHub\Mol_gan\ML_TEST\train_no_reward.py
 method:  grid
-project: dcgan
+project: molecular_gan
 description : GAN molecular no reward
+ Training parameters
+
+ Discriminator parameters
+ ########################
+
+ D(A,X) --> Dense1/2/3(AGGREGATE(A,CONCAT([CONV2(A,CONCAT[CONV1(A,X),X]),X])))
+
+ 'CONV1/2   : A,X ---> X_new, updates graph nodes embeddings'
+ 'AGGREGATE : A,X ---> X_new, weigted sum of graph nodes represenations'
+ 'dense X ---> X_new, standard linear transformation'
+
+ h1_d - dim of graph nodes after 1st graph convolution
+ h2_d - dim of graph nodes after 2nd graph convolution
+ h3_d - dim of aggregated vector, which represents whole graph
+ h4_d - dim of aggregated vector after first linear transformation
+
+ nonlinearity_D  - actiavtion function off all but last layer
+ Spectral_Norm_D - True/False -> applies spectral normalisation to
+                   all discriminator weights
+
+ batch_norm_D    - True/False --> applies batch norm after each layer
+                   activations except the last one
+
+ clip   - weight clipping parameter
+ Lambda - coefficient for GP (gradient penalty added to discriminator loss)
+
+ weight_init_D - distribution from which Discriminator weight initialised
+
+ lr_D          - discriminator learning rate
+
+Generator parameters
+####################
+'G : z --> (A,X)'
+G(Z) --> dense_edge(dense3(dense2(dense1(z))))  , dense_nodes(dense3(dense2(dense1(z))))
+
+h1_g - number of hidden nodes in the FIRST desne layer
+h_2g - number of hidden nodes in the SECOND dense layer
+h3_g - number of hidden nodes in the THIRD dense layer
+
+nonlinearity_G - type of activation after dense1/2/3 layers
+gumbel softmax applied after dense_edge and dense_nodes layers
+
+temp - gumbel softmax activation temperature
+
+
 parameters:
   seed:
     value: 42
   Lambda:
-    value: 0
+    value: null
   clip_value:
-    value: 0
+    value: null
   z_dim:
-    value: 64
+    value: 32
   drop_out:
     value: 0.1
   bz:
@@ -32,9 +77,9 @@ parameters:
   Spectral_Norm_D:
     value: True
   batch_norm_D:
-    value: false
+    value: False
   weight_init_D:
-    value: 'kaiming_normal'
+    value: 'normal'
   n_critic:
     value: 5
   h1_g:
@@ -44,18 +89,18 @@ parameters:
   h3_g:
     value: 512
   batch_norm_G:
-    value: false
+    value: False
   nonlinearity_G:
-    value: 'tanh'
+    value: 'relu'
   weight_init_G:
-    value: 'xavier_normal'
+    value: 'normal'
   temp:
     value: 0.1
   optimizer:
     value: 'RMS'
   grad_correction:
-    value: false
+    value: False
   lr_d:
-    values: [0.001, 0.0001]
+    values: [0.0003, 0.0001]
   lr_g:
-    values: [0.001, 0.0001]
+    values: [0.0003, 0.0001]

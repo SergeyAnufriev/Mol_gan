@@ -26,14 +26,18 @@ def permute4D(A):
 
 
 def to_list(bz,n_nodes):
+  '''Returns assigns each batch instance nodes '''
   final_list = [0]*n_nodes
   for i in range(1,bz):
     final_list += [i]*n_nodes
   return final_list
 
-'''MOLECULAR GAN GENERATOR CLASS'''
 
 class Generator(nn.Module):
+
+    '''Class to create generator model'''
+    '''Generator z: --> A, X'''
+    '''A - graph adjecency tensor  size =Batch_size X NumberNodes X NumberNodes X Number of unique connections types'''
 
     # N - maximum number of atoms
     # T - number of atom types
@@ -71,9 +75,11 @@ class Generator(nn.Module):
         x           = self.act_(self.drop_out(self.lin2(x)))
         output      = self.act_(self.drop_out(self.lin3(x)))
 
+        '''Compute Nodes feature matrix X'''
         nodes_logit = self.drop_out(self.nodes(output)).view(-1,self.N,self.T)
         nodes       = self.act_nodes(nodes_logit,dim=-1,tau=self.temp,hard=True)
 
+        '''Compute adjecency tensor A, where A must be symmetric'''
         edges_logit      = self.drop_out(self.edges(output)).view(-1,self.N,self.N,self.Y)
         edges_logit_T    = torch.transpose(edges_logit,1,2)
         edges_logit      = 0.5*(edges_logit+edges_logit_T)
@@ -81,10 +87,11 @@ class Generator(nn.Module):
         edges            = permute4D(edges_logit)
 
         return  nodes, edges
-    
-'''CONVOLUTION RELATIONAL GCN OPERATOR'''
 
 class Convolve(nn.Module):
+
+    '''Graph convolution layer based on Relational Graph Convolution paper'''
+
     def __init__(self,in_channels,out_channels,device):
         super(Convolve,self).__init__()
 
@@ -113,10 +120,11 @@ class Convolve(nn.Module):
 
         return X_new
 
-
-'''gate_nn computes Attention score during Global aggregation'''
-
 class gate_nn(torch.nn.Module):
+
+  '''Neural network used to compute attention scores for each graph node'''
+  '''Used in aggregation layer'''
+
   def __init__(self,in_channels,drop_out):
     super(gate_nn,self).__init__()
     self.lin1     = nn.Linear(in_channels,1,bias=True)
@@ -125,22 +133,26 @@ class gate_nn(torch.nn.Module):
     return self.drop_out(self.lin1(x))
 
 
-'''Graph nodes transformation network for Global aggregation layer'''
-
 class nn_(torch.nn.Module):
+
+  '''Graph nodes transformation network for Global aggregation layer'''
+  '''Transforms graph nopdes embeddings into shape of final graph vector represenation'''
+
   def __init__(self,in_channels,out_channels,drop_out):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels)
     self.drop_out = nn.Dropout(drop_out)
+    self.act = nn.LeakyReLU()
 
   def forward(self,x):
-    return self.drop_out(self.lin2(x))
+    return self.act(self.drop_out(self.lin2(x)))
 
 
-######## Combines each node represenations from nn_ and sums by 
-######## gate_nn attention scores #############################
 
 class Aggregate(torch.nn.Module):
+
+    '''Aggregation layer, returns weighted sum (found by attention) of graph nodes represenations'''
+
     def __init__(self,gate_nn,nn,device):
         super(Aggregate, self).__init__()
         self.agg = GlobalAttention(gate_nn, nn)
@@ -155,19 +167,22 @@ class Aggregate(torch.nn.Module):
         return self.agg(x,batch)
 
 
-##### paper h1,h2,h3,h4 = 128,64,128,64
-
-'''Rewrard and discriminator network class'''
-
 def spec_norm(m,type):
+
+    '''Function to apply/remove spectral normalisation to layer m'''
+    '''type: bool for apply/remove argument'''
+
     if m.__class__.__name__ == 'Linear':
         if type == True:
-            nn.utils.spectral_norm(m)
+            nn.utils.spectral_norm(m,n_power_iterations=2)
         else:
             nn.utils.remove_spectral_norm(m)
 
 
 class R(torch.nn.Module):
+
+  '''Class to create discriminator model'''
+
   def __init__(self,config,device):
     super(R,self).__init__()
 
@@ -185,6 +200,8 @@ class R(torch.nn.Module):
                                 nn.Linear(config.h3_d,config.h4_d,bias=True),
                                 activation[config.nonlinearity_D],
                                 nn.Linear(config.h4_d,1,bias=True))
+
+    self.act_ = activation[config.nonlinearity_D]
 
   def forward(self,A,x):
 
@@ -205,6 +222,8 @@ class R(torch.nn.Module):
 
 
   def turn_on_spectral_norm(self):
+
+      '''apply spectral norm to all discriminator weights '''
 
       if self.spectral_norm_mode is not None:
           assert self.spectral_norm_mode is False, "can't apply spectral_norm. It is already applied"
@@ -228,6 +247,8 @@ class R(torch.nn.Module):
 
 
   def turn_off_spectral_norm(self):
+
+      '''remove spectral norm from all discriminator weights'''
 
       if self.spectral_norm_mode is not None:
             assert self.spectral_norm_mode is True, \
