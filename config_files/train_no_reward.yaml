@@ -2,7 +2,17 @@ program: C:\Users\zcemg08\Documents\GitHub\Mol_gan\ML_TEST\train_no_reward.py
 method:  grid
 project: molecular_gan
 description : GAN molecular no reward
- Training parameters
+
+ Optimizer parameters
+ ####################
+
+ bz              - batch size
+ optimizer       - type of optimizer used for generator and discriminator model
+ grad_correction - type of second order gradient correction method
+ n_critic        - number of discriminator updates per one generator update
+ lr_D            - discriminator learning rate
+ lr_G            - generator learning rate
+ loss            - type of GAN loss function
 
  Discriminator parameters
  ########################
@@ -28,14 +38,14 @@ description : GAN molecular no reward
  clip   - weight clipping parameter
  Lambda - coefficient for GP (gradient penalty added to discriminator loss)
 
- weight_init_D - distribution from which Discriminator weight initialised
-
- lr_D          - discriminator learning rate
+ weight_init_D - discriminator weight initialised
 
 Generator parameters
 ####################
 'G : z --> (A,X)'
 G(Z) --> dense_edge(dense3(dense2(dense1(z))))  , dense_nodes(dense3(dense2(dense1(z))))
+
+z_dim - dimention of random number input to generator
 
 h1_g - number of hidden nodes in the FIRST desne layer
 h_2g - number of hidden nodes in the SECOND dense layer
@@ -45,6 +55,9 @@ nonlinearity_G - type of activation after dense1/2/3 layers
 gumbel softmax applied after dense_edge and dense_nodes layers
 
 temp - gumbel softmax activation temperature
+
+batch_norm_G  - apply batch normalisation after dense 1/2/3 layers
+weight_init_G - generator weight initialisation
 
 
 parameters:
@@ -99,7 +112,7 @@ parameters:
   optimizer:
     value: 'RMS'
   grad_correction:
-    value: False
+    value: null
   lr_d:
     values: [0.0003, 0.0001]
   lr_g:

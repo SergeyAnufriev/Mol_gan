@@ -10,6 +10,7 @@ import torch.nn as nn
 
 
 def JTVP(X,Y,V):
+
     '''Jacobian vector product where X is function
     to take derivative with respect to Y
     and V is the vector'''
@@ -25,8 +26,10 @@ def JTVP(X,Y,V):
 
 
 def weight_init(type_):
+
     '''Initialise linear layers weights'''
     '''Returns weight function for model.apply(weight function)'''
+
     def weight(m):
         classname = m.__class__.__name__
         if classname.find('Linear') != -1:
@@ -61,7 +64,11 @@ def sweep_to_dict(dir):
     return default_dict
 
 
-def test(model, test_loader,cuda): #### over full test dataset average loss
+def test(model, test_loader,cuda):
+
+  '''Evaluate model on regression preformance with R2
+      calculated over test dataset'''
+
   model.eval()
   test_loss = 0
   y_pred = []
@@ -80,6 +87,9 @@ def test(model, test_loader,cuda): #### over full test dataset average loss
 
 
 def train_test(dataset,b_size):
+
+  ''' Split dataset into train/test'''
+
   x = int(len(dataset)*0.8)
   y = len(dataset) - x
   train_dataset, test_dataset = random_split(dataset, [x, y])
@@ -92,9 +102,6 @@ real_label = 1.
 fake_label = 0.
 
 criterion = torch.nn.BCEWithLogitsLoss()
-
-'''this file collects GAN losses functions'''
-
 
 def gan_loss_dis(A_r,x_r,A_f,x_f,netD):
     '''DCGAN DISCRIMINATOR LOSS'''
@@ -139,8 +146,10 @@ def wgan_gen(A_f,x_f,netD):
 
   return -netD(A_f,x_f).mean()
 
-'''GRADIENT PENALTY DISCRIMINATOR'''
+
 def grad_penalty(A_r,x_r,A_f,x_f,netD,device):
+
+    '''GRADIENT PENALTY DISCRIMINATOR'''
     
     eps   = torch.rand(A_r.size()[0],device=device)
     eps_x = torch.unsqueeze(torch.unsqueeze(eps,-1),-1)
@@ -170,12 +179,15 @@ def grad_penalty(A_r,x_r,A_f,x_f,netD,device):
 
 
 def clip_weight(model,clip_value):
+
     '''Clip model weights by [-clip_value,clip_value]'''
+
     for p in model.parameters():
         p.data.clamp_(-clip_value,clip_value)
 
 
 def L2_norm(model):
+
     '''Model gradients L2 norm'''
 
     total_norm =0

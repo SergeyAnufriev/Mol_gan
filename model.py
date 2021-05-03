@@ -26,7 +26,7 @@ def permute4D(A):
 
 
 def to_list(bz,n_nodes):
-  '''Returns assigns each batch instance nodes '''
+  '''Returns assigns each batch instance nodes'''
   final_list = [0]*n_nodes
   for i in range(1,bz):
     final_list += [i]*n_nodes
@@ -97,10 +97,10 @@ class Convolve(nn.Module):
 
         self.root         = nn.Linear(in_channels,out_channels,bias=True)
 
-        self.single_      = nn.Linear(in_channels,out_channels,bias=True)
-        self.double_      = nn.Linear(in_channels,out_channels,bias=True)
-        self.triple_      = nn.Linear(in_channels,out_channels,bias=True)
-        self.aromat_      = nn.Linear(in_channels,out_channels,bias=True)
+        self.single_      = nn.Linear(in_channels,out_channels,bias=False)
+        self.double_      = nn.Linear(in_channels,out_channels,bias=False)
+        self.triple_      = nn.Linear(in_channels,out_channels,bias=False)
+        self.aromat_      = nn.Linear(in_channels,out_channels,bias=False)
 
         self.device       = device
 
@@ -138,11 +138,11 @@ class nn_(torch.nn.Module):
   '''Graph nodes transformation network for Global aggregation layer'''
   '''Transforms graph nopdes embeddings into shape of final graph vector represenation'''
 
-  def __init__(self,in_channels,out_channels,drop_out):
+  def __init__(self,in_channels,out_channels,act,drop_out):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels)
     self.drop_out = nn.Dropout(drop_out)
-    self.act = nn.LeakyReLU()
+    self.act = activation[act]
 
   def forward(self,x):
     return self.act(self.drop_out(self.lin2(x)))
@@ -196,9 +196,13 @@ class R(torch.nn.Module):
     self.agr    = Aggregate(gate_nn(config.h2_d+5,config.drop_out),nn_(config.h2_d+5,config.h3_d,config.drop_out),device)
 
     self.linear = nn.Sequential(nn.Linear(config.h3_d,config.h3_d,bias=True),
+                                nn.Dropout(config.drop_out),
                                 activation[config.nonlinearity_D],
+
                                 nn.Linear(config.h3_d,config.h4_d,bias=True),
+                                nn.Dropout(config.drop_out),
                                 activation[config.nonlinearity_D],
+
                                 nn.Linear(config.h4_d,1,bias=True))
 
     self.act_ = activation[config.nonlinearity_D]
