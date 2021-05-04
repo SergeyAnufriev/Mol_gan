@@ -26,7 +26,11 @@ def permute4D(A):
 
 
 def to_list(bz,n_nodes):
-  '''Returns assigns each batch instance nodes'''
+
+  '''Returns list [ n_nodes 0s, n_nodes 1s,....,n_nodes_bz-1] '''
+  '''If bz = 3 and n_nodes = 2
+  returns [0,0,1,1,2,2]'''
+
   final_list = [0]*n_nodes
   for i in range(1,bz):
     final_list += [i]*n_nodes
@@ -39,14 +43,12 @@ class Generator(nn.Module):
     '''Generator z: --> A, X'''
     '''A - graph adjecency tensor  size =Batch_size X NumberNodes X NumberNodes X Number of unique connections types'''
 
-    # N - maximum number of atoms
-    # T - number of atom types
-    # Y - number of bond types
-
-    #### Candidates to enforce A_sym = LL^T
-
     def __init__(self,config,N,T,Y):
       super(Generator, self).__init__()
+
+      '''N - number of atoms, 
+         T - number of unique atoms types including no atom
+         Y - number of unique bond types including no bond'''
 
       self.N = N
       self.T = T
@@ -81,6 +83,7 @@ class Generator(nn.Module):
 
         '''Compute adjecency tensor A, where A must be symmetric'''
         edges_logit      = self.drop_out(self.edges(output)).view(-1,self.N,self.N,self.Y)
+        '''Lines 86-88 excessive ?'''
         edges_logit_T    = torch.transpose(edges_logit,1,2)
         edges_logit      = 0.5*(edges_logit+edges_logit_T)
         edges_logit      = self.act_edges(edges_logit,dim=-1,tau=self.temp,hard=True)
@@ -129,6 +132,7 @@ class gate_nn(torch.nn.Module):
     super(gate_nn,self).__init__()
     self.lin1     = nn.Linear(in_channels,1,bias=True)
     self.drop_out = nn.Dropout(drop_out)
+
   def forward(self,x):
     return self.drop_out(self.lin1(x))
 
@@ -138,14 +142,14 @@ class nn_(torch.nn.Module):
   '''Graph nodes transformation network for Global aggregation layer'''
   '''Transforms graph nopdes embeddings into shape of final graph vector represenation'''
 
-  def __init__(self,in_channels,out_channels,act,drop_out):
+  def __init__(self,in_channels,out_channels,drop_out):
     super(nn_,self).__init__()
     self.lin2 = nn.Linear(in_channels,out_channels)
     self.drop_out = nn.Dropout(drop_out)
-    self.act = activation[act]
+
 
   def forward(self,x):
-    return self.act(self.drop_out(self.lin2(x)))
+    return self.drop_out(self.lin2(x))
 
 
 
@@ -193,7 +197,7 @@ class R(torch.nn.Module):
     self.conv1  = Convolve(5,config.h1_d,device)
     self.conv2  = Convolve(config.h1_d+5,config.h2_d,device)
 
-    self.agr    = Aggregate(gate_nn(config.h2_d+5,config.drop_out),nn_(config.h2_d+5,config.h3_d,config.drop_out),device)
+    self.agr  = Aggregate(gate_nn(config.h2_d+5,config.drop_out),nn_(config.h2_d+5,config.h3_d,config.drop_out),device)
 
     self.linear = nn.Sequential(nn.Linear(config.h3_d,config.h3_d,bias=True),
                                 nn.Dropout(config.drop_out),

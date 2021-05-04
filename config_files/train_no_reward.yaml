@@ -1,10 +1,10 @@
 program: C:\Users\zcemg08\Documents\GitHub\Mol_gan\ML_TEST\train_no_reward.py
 method:  grid
-project: molecular_gan
+project: dcgan
 description : GAN molecular no reward
 
  Optimizer parameters
- ####################
+
 
  bz              - batch size
  optimizer       - type of optimizer used for generator and discriminator model
@@ -15,13 +15,13 @@ description : GAN molecular no reward
  loss            - type of GAN loss function
 
  Discriminator parameters
- ########################
+
 
  D(A,X) --> Dense1/2/3(AGGREGATE(A,CONCAT([CONV2(A,CONCAT[CONV1(A,X),X]),X])))
 
- 'CONV1/2   : A,X ---> X_new, updates graph nodes embeddings'
- 'AGGREGATE : A,X ---> X_new, weigted sum of graph nodes represenations'
- 'dense X ---> X_new, standard linear transformation'
+ CONV1/2    A,X ---> X_new, updates graph nodes embeddings
+ AGGREGATE A,X ---> X_new, weigted sum of graph nodes represenations
+ dense X ---> X_new, standard linear transformation
 
  h1_d - dim of graph nodes after 1st graph convolution
  h2_d - dim of graph nodes after 2nd graph convolution
@@ -40,24 +40,24 @@ description : GAN molecular no reward
 
  weight_init_D - discriminator weight initialised
 
-Generator parameters
-####################
-'G : z --> (A,X)'
-G(Z) --> dense_edge(dense3(dense2(dense1(z))))  , dense_nodes(dense3(dense2(dense1(z))))
+ Generator parameters
 
-z_dim - dimention of random number input to generator
+ G  z --> (A,X)
+ G(Z) --> dense_edge(dense3(dense2(dense1(z))))  , dense_nodes(dense3(dense2(dense1(z))))
 
-h1_g - number of hidden nodes in the FIRST desne layer
-h_2g - number of hidden nodes in the SECOND dense layer
-h3_g - number of hidden nodes in the THIRD dense layer
+ z_dim - dimention of random number input to generator
 
-nonlinearity_G - type of activation after dense1/2/3 layers
-gumbel softmax applied after dense_edge and dense_nodes layers
+ h1_g - number of hidden nodes in the FIRST desne layer
+ h_2g - number of hidden nodes in the SECOND dense layer
+ h3_g - number of hidden nodes in the THIRD dense layer
 
-temp - gumbel softmax activation temperature
+ nonlinearity_G - type of activation after dense1/2/3 layers
+ gumbel softmax applied after dense_edge and dense_nodes layers
 
-batch_norm_G  - apply batch normalisation after dense 1/2/3 layers
-weight_init_G - generator weight initialisation
+ temp - gumbel softmax activation temperature
+
+ batch_norm_G  - apply batch normalisation after dense 1/2/3 layers
+ weight_init_G - generator weight initialisation
 
 
 parameters:

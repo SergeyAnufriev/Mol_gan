@@ -55,14 +55,16 @@ opt_G = torch.optim.RMSprop(G.parameters(), lr=config.lr_g,alpha=0.9)
 z_test             = torch.randn(5000,config.z_dim,device=device)
 
 '''Model chemical validity evaluation frequency = epoch/k'''
-k = int(len(data)/5)
+l = len(data)
+k = int(l/5)
+counter = 0
 
 '''Training loop'''
 for epoch in range(config.epochs):
     for i,(A,X,_) in enumerate(data):
 
         '''Train discriminator'''
-
+        counter +=1
         opt_D.zero_grad()
         z = torch.randn(config.bz,config.z_dim).to(device)
         X_fake,A_fake  = G(z)
@@ -74,18 +76,18 @@ for epoch in range(config.epochs):
 
         if config.Lambda is not None:
             GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
-            wandb.log({'GP':GP})
+            wandb.log({'GP':GP,'epoch':counter/l})
             D_loss  += config.LAMBDA*GP
 
         D_loss.backward()
 
         '''Log discriminator statistics'''
 
-        wandb.log({'D_Wloss':D_loss})
-        wandb.log({'D(real)':D_real})
-        wandb.log({'D(fake)':D_fake})
+        wandb.log({'D_Wloss':D_loss,'epoch':counter/l})
+        wandb.log({'D(real)':D_real,'epoch':counter/l})
+        wandb.log({'D(fake)':D_fake,'epoch':counter/l})
         D_norm = L2_norm(D)
-        wandb.log({'D_grad_L2':D_norm})
+        wandb.log({'D_grad_L2':D_norm,'epoch':counter/l})
 
         opt_D.step()
 
@@ -107,11 +109,11 @@ for epoch in range(config.epochs):
 
             '''Log generator statistics'''
 
-            wandb.log({'G_loss':G_loss})
+            wandb.log({'G_loss':G_loss,'epoch':counter/l})
             G_norm = L2_norm(G)
-            wandb.log({'G_grad_L2':G_norm})
+            wandb.log({'G_grad_L2':G_norm,'epoch':counter/l})
             total_norm = (G_norm**2+D_norm**2)** (1. / 2)
-            wandb.log({'Total_L2':total_norm})
+            wandb.log({'Total_L2':total_norm,'epoch':counter/l})
             opt_G.step()
 
         if i%k==0:
@@ -124,12 +126,9 @@ for epoch in range(config.epochs):
 
            '''Valid compounds calculation'''
            x,a = G(z_test)
-           wandb.log({'valid':valid_compounds(a,x,device),'epoch':i/len(data)})
+           wandb.log({'valid':valid_compounds(a,x,device),'epoch':counter/l})
 
            '''Save generator weights'''
            PATH = os.path.join(run_loc,'G'+'_'+'epoch-{}.pt'.format(epoch))
            torch.save(G, PATH)
            wandb.save('*.pt')
-
-    '''Count epochs'''
-    wandb.log({'epoch':epoch})
