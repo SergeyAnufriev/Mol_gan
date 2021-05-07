@@ -5,6 +5,9 @@ import numpy as np
 
 
 class Queue:
+
+    '''BFS queue object '''
+
     def __init__(self):
         self.items  = []
     def enq(self,x):
@@ -16,7 +19,6 @@ class Queue:
             return None
         else:
             return self.items.pop()
-
 
 
 def distance(adj_list,start):
@@ -54,7 +56,9 @@ def distance(adj_list,start):
 
 def subgraphs(adj_list):
 
-  '''find all disconnetced subgaphs in graph'''
+  '''find all disconnetced subgaphs in graph
+     Input: graph adjecency list
+     Output: list of isolated graphs adjecency lists'''
 
   nodes     = list(range(len(adj_list)))
   subgraphs = []
@@ -71,6 +75,14 @@ def subgraphs(adj_list):
 
 
 def node_to_dict(mat,device):
+
+  '''
+  Input: one hot node feature matrix N_node X N_node_types
+  Output: dictionary where key = node number and value = {0,1}
+  0 - empty node
+  1 - non empty node
+  '''
+
   node_to_val = {}
   n,m = mat.size()
   pad = torch.tensor([0]*(m-1) + [1],dtype=torch.float32,device=device)
@@ -83,6 +95,10 @@ def node_to_dict(mat,device):
 
 
 def tens_to_adj_list(tens,device):
+
+  '''Input: Adjecency tensor size = N_nodes x N_nodes x Type_of_connections
+     Output: Adjecency list graph reperesenation'''
+
   n,_,m = tens.size()
   adj_l = [[] for _ in range(n)]
   pad1 = torch.zeros(m,dtype=torch.float32,device=device)
@@ -97,6 +113,14 @@ def tens_to_adj_list(tens,device):
 
 
 def valid(subgraphs,dict_):
+
+  '''Input: list of adjecency lists and dictionary which tells if a node is an empty node
+   Output: {0,1}
+   0 - Invalid graph
+   1 - Valid graph
+
+   Graph is valid if all other disconnected graphs are self isolated empty nodes'''
+
   n_valid = 0  ### number of graphs with real atoms
   for G in subgraphs:
     if len(G)>1 and any(dict_[x] == 0 for x in G):  ## check if empty nodes are self isolated or not
@@ -111,6 +135,9 @@ def valid(subgraphs,dict_):
 
 def valid_graph(A,x,device):
 
+  '''Function returns valid sub Graph, if all other disconnected graphs
+   are empty nodes'''
+
   adj_list   = tens_to_adj_list(A,device)  ## From Adjeccency tensor to adjecency list
   dict_      = node_to_dict(x,device)      ## 1 if atom real, 0 empty node
   subgraphs_ = subgraphs(adj_list)  ## find all subgraphs by BFS algo
@@ -124,6 +151,10 @@ def valid_graph(A,x,device):
 
 
 def array_to_atom(x,atom_set=['C','O','N','F']):
+
+  '''Input: one-hot atom represenation
+     Output rdkit-atom specific atom number'''
+
   max_atoms = len(atom_set)
   idx  = np.dot(x.cpu().numpy(),np.array(range(0,max_atoms+1))).astype(int)
   if idx == max_atoms:
@@ -133,6 +164,10 @@ def array_to_atom(x,atom_set=['C','O','N','F']):
     return atom.GetAtomicNum()
 
 def array_to_bond(x):
+
+  '''Input: one-hot bond represenation
+     Output rdkit bond object'''
+
   if torch.sum(x).cpu().numpy() == 0:
     return None
   else:
@@ -143,8 +178,9 @@ def array_to_bond(x):
 
 def A_x_to_mol(A,x,device):
 
-  '''Converst Adjecency tensor (A) and node feature matrix (X)
-  to molecule, i.e rdkit mol object'''
+  '''Convert Adjecency tensor (A) and node feature matrix (x)
+  to molecule, i.e rdkit mol object
+  if invalid molecule returns None'''
 
   _,A,x = valid_graph(A,x,device)
 
