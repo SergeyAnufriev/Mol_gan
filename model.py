@@ -187,17 +187,17 @@ class R(torch.nn.Module):
 
   '''Class to create discriminator model'''
 
-  def __init__(self,config,device):
+  def __init__(self,config,device,act_last=None):
     super(R,self).__init__()
 
     self.spectral_norm_mode = False
-    self.loss_type          = config.loss
+    self.act_last          =  act_last
     self.drop_out           = nn.Dropout(config.drop_out)
 
     self.conv1  = Convolve(5,config.h1_d,device)
     self.conv2  = Convolve(config.h1_d+5,config.h2_d,device)
 
-    self.agr  = Aggregate(gate_nn(config.h2_d+5,config.drop_out),nn_(config.h2_d+5,config.h3_d,config.drop_out),device)
+    self.agr  = Aggregate(gate_nn(config.h2_d+config.h1_d,config.drop_out),nn_(config.h2_d+config.h1_d,config.h3_d,config.drop_out),device)
 
     self.linear = nn.Sequential(nn.Linear(config.h3_d,config.h3_d,bias=True),
                                 nn.Dropout(config.drop_out),
@@ -218,12 +218,12 @@ class R(torch.nn.Module):
     h_2    = self.act_(self.drop_out(self.conv2(A,torch.cat((h_1,x),-1))))
 
     '''Aggregate layer'''
-    h_3    = self.act_(self.agr.forward(torch.cat((h_2,x),-1)))
+    h_3    = self.act_(self.agr.forward(torch.cat((h_2,h_1),-1)))
 
     '''Dense layers'''
     scalar = self.linear(h_3)
 
-    if self.loss_type == 'GAN':
+    if self.act_last is not None:
         scalar = activation['sigmoid'](scalar)
 
     return scalar

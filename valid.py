@@ -1,6 +1,5 @@
 from random import choice
 import torch
-#from utils import A_x_to_mol
 from molecular_metrics import MolecularMetrics
 from rdkit import Chem
 import numpy as np
@@ -170,7 +169,7 @@ def A_x_to_mol(A,x,device):
     return None
 
 
-def valid_compounds(A,X,device):
+def A_X_to_mols(A,X,device):
 
     bz = A.size()[0]
     mols = []
@@ -184,4 +183,4 @@ def valid_compounds(A,X,device):
         else:
             mols+=[A_x_to_mol(a,x,device)]
 
-    return MolecularMetrics.valid_total_score(mols)
+    return mols

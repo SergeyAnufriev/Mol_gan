@@ -7,7 +7,8 @@ import wandb
 from utils import sweep_to_dict,L2_norm,wgan_dis,wgan_gen,grad_penalty,weight_init,clip_weight
 import os
 from vizulise import plot2
-from valid import valid_compounds
+from valid import A_X_to_mols
+from molecular_metrics import MolecularMetrics
 
 '''GPU/CPU calculations depending on if GPU is available'''
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -77,7 +78,7 @@ for epoch in range(config.epochs):
         if config.Lambda is not None:
             GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
             wandb.log({'GP':GP,'epoch':counter/l})
-            D_loss  += config.LAMBDA*GP
+            D_loss  += config.Lambda*GP
 
         D_loss.backward()
 
@@ -125,8 +126,9 @@ for epoch in range(config.epochs):
            plot2(A_fake,X_fake)
 
            '''Valid compounds calculation'''
-           x,a = G(z_test)
-           wandb.log({'valid':valid_compounds(a,x,device),'epoch':counter/l})
+           x,a       = G(z_test)
+           mols_fake = A_X_to_mols(a,x,device)
+           wandb.log({'valid':MolecularMetrics.valid_total_score(mols_fake),'epoch':counter/l})
 
            '''Save generator weights'''
            PATH = os.path.join(run_loc,'G'+'_'+'epoch-{}.pt'.format(epoch))
