@@ -10,7 +10,7 @@ import numpy as np
 
 device_type = 'GPU'
 
-if device_type == 'GPU':
+if device_type == 'CPU':
     NP = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\NP_score.pkl.gz'
     SA = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\SA_score.pkl.gz'
 else:
