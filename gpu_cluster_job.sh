@@ -3,7 +3,7 @@
 
 #$ -S /bin/bash
 #$ -l gpu=1
-#$ -l h_rt=4:00:0
+#$ -l h_rt=10:00:0
 #$ -l mem=1G
 #$ -l tmpfs=15G
 #$ -N GPUJob
