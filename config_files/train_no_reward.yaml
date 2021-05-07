@@ -114,6 +114,6 @@ parameters:
   grad_correction:
     value: null
   lr_d:
-    values: [0.0001, 0.0001]
+    values: [0.0005, 0.0001]
   lr_g:
-    values: [0.001, 0.0001]
+    values: [0.0005, 0.0001]

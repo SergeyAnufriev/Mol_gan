@@ -141,7 +141,8 @@ def array_to_bond(x):
 
 def A_x_to_mol(A,x,device):
 
-  '''Converst Adjecency tensor (A) and node feature matrix (X) to molecule'''
+  '''Converst Adjecency tensor (A) and node feature matrix (X)
+  to molecule, i.e rdkit mol object'''
 
   _,A,x = valid_graph(A,x,device)
 
@@ -170,6 +171,9 @@ def A_x_to_mol(A,x,device):
 
 
 def A_X_to_mols(A,X,device):
+
+    '''Returns list of mol objects if molecule is a valid
+    otherwise returns None's'''
 
     bz = A.size()[0]
     mols = []
