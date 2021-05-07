@@ -23,10 +23,10 @@ cuda = device('cuda' if cuda.is_available() else 'cpu')
 '''Experiment set up'''
 '''Lr rates ordered by backprop order'''
 
-with open(r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\ML_TEST\single_run.yaml') as file:
+with open(r'/GAN_experiments\single_run.yaml') as file:
     params = yaml.safe_load(file)
 
-wandb.init(config=params,project="ML_TEST") #####
+wandb.init(config=params,project="GAN_experiments") #####
 config = wandb.config
 
 n_node_features = 5
@@ -38,7 +38,7 @@ b_size = config.bz
 dr     = config.drop_out
 epoch  = config.epochs
 
-train_d, test_d = train_test(Mol_dataset(r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'),b_size)
+train_d, test_d = train_test(Mol_dataset(r'/data/gdb9_clean.sdf'), b_size)
 model           = R(n_node_features,h1,h2,h3,h4,dr,cuda)
 model.to(cuda)
 criterion = nn.MSELoss()

@@ -1,4 +1,4 @@
-program: /home/zcemg08/Scratch/Mol_gan2/ML_TEST/train_with_reward.py
+program: /home/zcemg08/Scratch/Mol_gan2/GAN_experiments/train_with_reward.py
 method:  grid
 project: gan_molecular2
 description : GAN molecular no reward

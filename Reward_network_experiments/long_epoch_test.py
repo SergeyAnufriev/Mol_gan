@@ -47,7 +47,7 @@ epochs = config.epochs
 
 '''QM9 dataset is used to train reward network model'''
 
-datka = Mol_dataset(r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf')
+datka = Mol_dataset(r'/data/gdb9_clean.sdf')
 criterion = nn.MSELoss()
 
 def test(model, test_loader): #### over full test dataset average loss

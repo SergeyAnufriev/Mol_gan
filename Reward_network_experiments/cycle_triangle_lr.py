@@ -11,7 +11,7 @@ from utils import train_test,sweep_to_dict,test
 
 
 dir_config  = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\ML_TEST\cycle_lr.yaml'
-dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
+dir_dataset = r'/data/gdb9_clean.sdf'
 
 wandb.init(config=sweep_to_dict(dir_config))
 config = wandb.config
