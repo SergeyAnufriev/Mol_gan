@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import wandb
 
+'''Code to plot produced molecules'''
 
 edges = {1:{'weight':2,'color':'black','edge_type':'/'},\
              2:{'weight':4,'color':'y','edge_type':'//'},\
@@ -30,7 +31,7 @@ def norm_vec(x1,y1,x2,y2):
 
 def plot2(A,X):
 
-    '''Vizualise graphs with adjecency tensor and node feature matrix'''
+    '''Vizualise graphs GIVEN  adjecency tensor and node feature matrix'''
 
 
     A,X = A.detach().cpu().numpy(), X.detach().cpu().numpy()

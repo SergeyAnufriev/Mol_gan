@@ -7,12 +7,16 @@ activation = {'tanh':nn.Tanh(),'relu':nn.LeakyReLU(),'sigmoid':nn.Sigmoid()}
 
 def permute3D(A):
 
+  '''Turn one hot 3D tensor into symmetric'''
+
   A = A.permute(2,0,1)
   A_new = torch.triu(A,diagonal=1) + torch.transpose(torch.triu(A,diagonal=1),1,2)
 
   return A_new.permute(1,2,0)
 
 def permute4D(A):
+
+  '''Turn one hot 4Dtensor into symmetric'''
 
   bz,n,m,k = A.size()
 

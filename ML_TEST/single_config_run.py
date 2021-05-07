@@ -2,11 +2,11 @@ from model import R
 from data_loader import Mol_dataset
 import wandb
 import torch.nn as nn
-from torch import float32,device,manual_seed,backends,cuda,save,no_grad
+from torch import float32,device,manual_seed, cuda, no_grad
 import torch.optim as optim
 import numpy as np
 import random
-from Diagnostic import plot_real_vs_predicted,train_info
+from misc.Diagnostic import plot_real_vs_predicted,train_info
 from utils import train_test
 from sklearn.metrics import r2_score
 import yaml

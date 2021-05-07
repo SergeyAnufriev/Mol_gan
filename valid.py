@@ -1,9 +1,8 @@
 from random import choice
 import torch
-from molecular_metrics import MolecularMetrics
 from rdkit import Chem
 import numpy as np
-#### BFS #########################
+
 
 class Queue:
     def __init__(self):
@@ -18,9 +17,11 @@ class Queue:
         else:
             return self.items.pop()
 
-'''BFS ALGORITHM TO COMPUTE SHORTEST DISTANCE'''
 
-def distance(adj_list,start): ### BFS
+
+def distance(adj_list,start):
+
+    '''BFS ALGORITHM TO COMPUTE SHORTEST DISTANCE in graph'''
 
     q = Queue()
     colour   = []
@@ -50,8 +51,10 @@ def distance(adj_list,start): ### BFS
         colour[u] = 'BLACK'
     return dist
 
-'''find all disconnetced subgaphs in graph'''
+
 def subgraphs(adj_list):
+
+  '''find all disconnetced subgaphs in graph'''
 
   nodes     = list(range(len(adj_list)))
   subgraphs = []
@@ -83,7 +86,6 @@ def tens_to_adj_list(tens,device):
   n,_,m = tens.size()
   adj_l = [[] for _ in range(n)]
   pad1 = torch.zeros(m,dtype=torch.float32,device=device)
-  #pad2 = torch.tensor([0]*(m-1)+[1],dtype=torch.int,device=device)
   pad2 = torch.tensor([0]*(m-1)+[1],dtype=torch.float32,device=device)
   for i in range(n):
     for j in range(n):

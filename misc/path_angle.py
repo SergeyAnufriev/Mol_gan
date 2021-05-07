@@ -8,9 +8,9 @@ from data_loader import Mol_dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import random_split
 
-dir_config = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\train_no_reward.yaml'
-PATH = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data'
-dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
+dir_config = r'/config_files/GAN_param_grid.yaml'
+PATH = r'/data'
+dir_dataset = r'/data/gdb9_clean.sdf'
 
 #wandb.init(config=sweep_to_dict(dir_config))
 #config = wandb.config

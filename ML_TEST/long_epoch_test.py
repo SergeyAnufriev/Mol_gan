@@ -2,13 +2,13 @@ from model import R
 from data_loader import Mol_dataset
 import wandb
 import torch.nn as nn
-from torch import cat,no_grad,float32,flatten,device,save,manual_seed,backends,cuda
+from torch import no_grad,float32, device,save,manual_seed, cuda
 import torch.optim as optim
 import numpy as np
 import os
 import random
 from utils import train_test
-from Diagnostic import plot_real_vs_predicted
+from misc.Diagnostic import plot_real_vs_predicted
 from sklearn.metrics import r2_score
 
 '''fix random seed'''
