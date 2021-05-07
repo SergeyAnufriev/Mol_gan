@@ -47,35 +47,6 @@ class Mol_dataset(Dataset,MolecularMetrics):
                           bt == Chem.rdchem.BondType.TRIPLE,\
                           bt == Chem.rdchem.BondType.AROMATIC]))
 
-  def array_to_atom(self,x):
-
-    '''Input: one-hot atom vector represenation
-      Output: rdkit specific atom number based on atom type
-      or 0 if empty atom'''
-
-    max_atoms = len(self.atom_set)
-    idx  = np.dot(x.numpy(),np.array(range(0,max_atoms+1))).astype(int)
-    if idx == max_atoms:
-      return 0
-    else:
-
-      atom = Chem.rdchem.Atom(self.atom_set[idx])
-      return atom.GetAtomicNum()
-  
-  @staticmethod
-  def array_to_bond(x):
-
-    '''Input: one-hot bond vector represenation
-       Output: rdkit bond object or None'''
-
-    if torch.sum(x).numpy() == 0:
-      return None
-    else:
-      idx = np.dot(x.numpy(),np.array(range(0,5))).astype(int)
-      return [Chem.rdchem.BondType.SINGLE,Chem.rdchem.BondType.DOUBLE,\
-            Chem.rdchem.BondType.TRIPLE,Chem.rdchem.BondType.AROMATIC,None][idx]
-
-
   def atom_features(self,mol):
 
     '''Input: rdkit mol object
