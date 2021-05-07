@@ -3,17 +3,17 @@ from rdkit import Chem
 from molecular_metrics import MolecularMetrics
 from torch.utils.data import Dataset
 import numpy as np
-from rdkit.Chem import RWMol
 from torch.nn.functional import one_hot
 
 
-"""Return a foobang
-
-this module creates molecular data loader
-
-"""
-
 class Mol_dataset(Dataset,MolecularMetrics):
+
+  '''Pytorch dataset class to sample molecules from dataset
+  in form of A,X,r
+  A - adjecency tensor
+  X - node feature matrix
+  r - scalar, reward'''
+
   def __init__(self,sdf_file,atom_set=['C','O','N','F'],N=9):
     self.suppl    = Chem.SDMolSupplier(sdf_file)
     self.atom_set = atom_set
@@ -26,6 +26,10 @@ class Mol_dataset(Dataset,MolecularMetrics):
 
   @staticmethod
   def mol_with_atom_index(mol):
+
+    '''Assign each atom atom index attribute,
+    each index is a 0<unique value<number of atoms'''
+
     atoms = mol.GetNumAtoms()
     for idx in range(atoms):
         mol.GetAtomWithIdx(idx).SetProp('molAtomMapNumber', str(mol.GetAtomWithIdx(idx).GetIdx()))
@@ -33,6 +37,10 @@ class Mol_dataset(Dataset,MolecularMetrics):
   
   @staticmethod
   def bond_features(bond):
+
+    '''Input: bond object
+      Output: one-hot vector represenation'''
+
     bt = bond.GetBondType()
     return (torch.Tensor([bt == Chem.rdchem.BondType.SINGLE,\
                           bt == Chem.rdchem.BondType.DOUBLE,\
@@ -40,6 +48,11 @@ class Mol_dataset(Dataset,MolecularMetrics):
                           bt == Chem.rdchem.BondType.AROMATIC]))
 
   def array_to_atom(self,x):
+
+    '''Input: one-hot atom vector represenation
+      Output: rdkit specific atom number based on atom type
+      or 0 if empty atom'''
+
     max_atoms = len(self.atom_set)
     idx  = np.dot(x.numpy(),np.array(range(0,max_atoms+1))).astype(int)
     if idx == max_atoms:
@@ -52,6 +65,9 @@ class Mol_dataset(Dataset,MolecularMetrics):
   @staticmethod
   def array_to_bond(x):
 
+    '''Input: one-hot bond vector represenation
+       Output: rdkit bond object or None'''
+
     if torch.sum(x).numpy() == 0:
       return None
     else:
@@ -59,29 +75,11 @@ class Mol_dataset(Dataset,MolecularMetrics):
       return [Chem.rdchem.BondType.SINGLE,Chem.rdchem.BondType.DOUBLE,\
             Chem.rdchem.BondType.TRIPLE,Chem.rdchem.BondType.AROMATIC,None][idx]
 
-  
-  def A_x_to_mol(self,A, x):
-
-    mol = RWMol()
-    n_atoms = x.size()[0]
-
-    non_empty_atoms = []
-    for i in range(n_atoms):
-        if x[i,:][-1].numpy() != 1:
-            mol.AddAtom(Chem.Atom(0))
-            non_empty_atoms.append(i)
-
-    for i in non_empty_atoms:
-      for j in non_empty_atoms:
-         bond = self.array_to_bond(A[i,j,:])
-         if i>j and bond != None:
-             mol.AddBond(i,j,bond)
-    for i in non_empty_atoms:
-        mol.GetAtomWithIdx(i).SetAtomicNum(self.array_to_atom(x[i,:]))
-    return mol
-
 
   def atom_features(self,mol):
+
+    '''Input: rdkit mol object
+      Output: node feature matrix size max_num_atoms x n_atom_types including no atom'''
     
     a_list = []
     max_atoms_types = len(self.atom_set)
@@ -103,6 +101,10 @@ class Mol_dataset(Dataset,MolecularMetrics):
     return N_f_mat
 
   def adj_mat(self,mol):
+
+    '''Input: rdkit mol object
+      Output: adjecency tensor size max_num_atoms x max_num_atoms x n_bond_types including no bond'''
+
     adjecency_mat = torch.zeros((self.N,self.N,4))
     for bond in mol.GetBonds():
         start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
@@ -113,6 +115,10 @@ class Mol_dataset(Dataset,MolecularMetrics):
 
   @staticmethod
   def reward(mol):
+
+    '''Input: rdkit mol object
+       Output: reward'''
+
     LogP_ = Mol_dataset.water_octanol_partition_coefficient_scores([mol],norm=True)
     QED_  = Mol_dataset.quantitative_estimation_druglikeness_scores([mol],norm=True)
     SAS_  = Mol_dataset.synthetic_accessibility_score_scores([mol],norm=True)
@@ -121,6 +127,9 @@ class Mol_dataset(Dataset,MolecularMetrics):
 
 
   def __getitem__(self,idx):
+
+    '''Overwrite pytorch get item method'''
+
     if torch.is_tensor(idx):
       idx = idx.tolist() 
 
