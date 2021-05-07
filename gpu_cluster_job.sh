@@ -9,6 +9,9 @@
 #$ -N GPUJob
 #$ -wd /home/zcemg08/Scratch/Mol_gan2
 
+cd ~/Scratch/Mol_gan2
+git pull
+
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
 
@@ -17,7 +20,7 @@ module load compilers/gnu/4.9.2
 module load python/miniconda3/4.5.11
 module load cuda/10.1.243/gnu-4.9.2
 
-PYTHONPATH=~/Mol_gan:${PYTHONPATH}
+PYTHONPATH=~/Mol_gan2:${PYTHONPATH}
 export PYTHONPATH
 
 source activate env5
