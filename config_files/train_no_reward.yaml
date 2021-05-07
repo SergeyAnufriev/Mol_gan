@@ -1,6 +1,6 @@
 program: C:\Users\zcemg08\Documents\GitHub\Mol_gan\ML_TEST\train_with_reward.py
 method:  grid
-project: dcgan
+project: molecular_gan2
 description : GAN molecular no reward
 
  Optimizer parameters
@@ -13,6 +13,7 @@ description : GAN molecular no reward
  lr_D            - discriminator learning rate
  lr_G            - generator learning rate
  loss            - type of GAN loss function
+ reinforcment    - (1-scalar)*GAN_loss + scalar*RL_loss
 
  Discriminator parameters
 
@@ -113,7 +114,9 @@ parameters:
     value: 'RMS'
   grad_correction:
     value: null
+  reinforcment:
+    value: 0.2
   lr_d:
-    values: [0.0005, 0.0001]
+    values: [0.001, 0.0001]
   lr_g:
-    values: [0.0005, 0.0001]
+    values: [0.001, 0.0001]

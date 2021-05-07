@@ -3,14 +3,11 @@
 
 #$ -S /bin/bash
 #$ -l gpu=1
-#$ -l h_rt=14:00:0
+#$ -l h_rt=4:00:0
 #$ -l mem=1G
 #$ -l tmpfs=15G
 #$ -N GPUJob
 #$ -wd /home/zcemg08/Scratch/Mol_gan2
-
-cd ~/Scratch/Mol_gan2
-git pull
 
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
