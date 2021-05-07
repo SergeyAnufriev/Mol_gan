@@ -13,13 +13,17 @@ from valid import valid_compounds
 from optimizers import LSD_Adam,parameters_grad_to_vector
 
 
+device_type = 'GPU'
 
+'''GPU/CPU calculations depending on if GPU is available'''
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-'''Initialise parameters and data path'''
-
-dir_config  = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\train_no_reward.yaml'
-dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
+if device_type == 'GPU':
+    dir_config  = r'/home/zcemg08/Scratch/Mol_gan2/config_files/GAN_param_grid.yaml'
+    dir_dataset = r'/home/zcemg08/Scratch/data/gdb9_clean.sdf'
+else:
+    dir_config  = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\GAN_param_grid.yam'
+    dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
 
 print(sweep_to_dict(dir_config))
 

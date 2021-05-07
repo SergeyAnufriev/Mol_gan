@@ -10,17 +10,18 @@ from vizulise import plot2
 from valid import A_X_to_mols
 from molecular_metrics import MolecularMetrics
 
+
+device_type = 'GPU'
+
 '''GPU/CPU calculations depending on if GPU is available'''
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-'''CPU'''
-r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\GAN_param_grid.yam'
-r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
-
-'''Configuration and data files paths'''
-
-dir_config  = r'/home/zcemg08/Scratch/Mol_gan2/config_files/GAN_param_grid.yaml'
-dir_dataset = r'/home/zcemg08/Scratch/data/gdb9_clean.sdf'
+if device_type == 'GPU':
+    dir_config  = r'/home/zcemg08/Scratch/Mol_gan2/config_files/GAN_param_grid.yaml'
+    dir_dataset = r'/home/zcemg08/Scratch/data/gdb9_clean.sdf'
+else:
+    dir_config  = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\GAN_param_grid.yam'
+    dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
 
 '''Initialise parameters in config object'''
 wandb.init(config=sweep_to_dict(dir_config))
