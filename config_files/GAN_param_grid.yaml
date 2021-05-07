@@ -1,6 +1,6 @@
 program: /home/zcemg08/Scratch/Mol_gan2/ML_TEST/train_with_reward.py
 method:  grid
-project: molecular_gan2
+project: gan_molecular2
 description : GAN molecular no reward
 
  Optimizer parameters
