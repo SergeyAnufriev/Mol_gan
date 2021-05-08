@@ -58,9 +58,9 @@ if config.Spectral_Norm_D == True:
     D.turn_on_spectral_norm()
 
 '''Optimizers set up'''
-opt_D = torch.optim.RMSprop(D.parameters(), lr=config.lr_d,alpha=0.9)
-opt_V = torch.optim.RMSprop(V.parameters(), lr=config.lr_d,alpha=0.9)
-opt_G = torch.optim.RMSprop(G.parameters(), lr=config.lr_g,alpha=0.9)
+opt_D = torch.optim.RMSprop(D.parameters(), lr=config.lr_d,alpha=config.alpha)
+opt_V = torch.optim.RMSprop(V.parameters(), lr=config.lr_d,alpha=config.alpha)
+opt_G = torch.optim.RMSprop(G.parameters(), lr=config.lr_g,alpha=config.alpha)
 
 def reward(mols):
     return torch.tensor([Mol_dataset.reward(mol)[0] if mol is not None else 0 for mol in mols],device=device,dtype=torch.float32)
@@ -96,7 +96,7 @@ for epoch in range(config.epochs):
         value_fake       = V(A_fake.to(device),X_fake.to(device))
 
         '''Find Value function loss'''
-        V_loss = mse(fake_true_reward,value_fake) + mse(real_true_reward.type(torch.float32),value_real)
+        V_loss = mse(fake_true_reward.to(device),value_fake.to(device)) + mse(real_true_reward.type(torch.float32).to(device),value_real.to(device))
         wandb.log({'Value_loss':V_loss,'epoch':counter/l})
         V_loss.backward()
         opt_V.step()
@@ -138,7 +138,7 @@ for epoch in range(config.epochs):
             X_fake,A_fake = G(z)
             '''Calculate generator loss'''
             G_loss        = wgan_gen(A_fake.to(device),X_fake.to(device),D)
-            Rl_loss       = V(A_fake,X_fake).mean()
+            Rl_loss       = V(A_fake.to(device),X_fake.to(device)).mean()
 
             alpha = G_loss/Rl_loss
 
