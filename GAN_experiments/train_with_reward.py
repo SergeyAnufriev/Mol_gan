@@ -1,7 +1,6 @@
 from model import R,Generator
 from data_loader import Mol_dataset
 from torch.utils.data import DataLoader
-from torch.utils.data.dataloader import default_collate
 import torch
 import numpy as np
 import wandb
@@ -84,20 +83,30 @@ for epoch in range(config.epochs):
         counter +=1
         opt_D.zero_grad()
         z = torch.randn(config.bz,config.z_dim,device=device)
+
+        print('A device',A.device,A.dtype)
+        print('X device',X.device,X.dtype)
+        print('R device',real_true_reward.device,real_true_reward.dtype)
+
         X_fake,A_fake  = G(z)
 
+        print('z device',z.device)
+        print('A fake device',A_fake.device,A_fake.dtype)
+        print('X fake device',X_fake.device,X_fake.dtype)
 
         opt_V.zero_grad()
         '''Calculate actual reward for generated molecules'''
         fake_mols        = A_X_to_mols(A_fake,X_fake,device)
         fake_true_reward = reward(fake_mols).unsqueeze(1)
 
+        print('fake reward type',fake_true_reward.device,fake_true_reward.dtype)
+
         '''Calculate rewards by reward network'''
         value_real       = V(A,X)
         value_fake       = V(A_fake,X_fake)
 
         '''Find Value function loss'''
-        V_loss = mse(fake_true_reward.to(device),value_fake.to(device)) + mse(real_true_reward.type(torch.float32).to(device),value_real.to(device))
+        V_loss = mse(fake_true_reward,value_fake) + mse(real_true_reward,value_real)
         wandb.log({'Value_loss':V_loss,'epoch':counter/l})
         V_loss.backward()
         opt_V.step()

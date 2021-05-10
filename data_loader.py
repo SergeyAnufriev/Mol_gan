@@ -42,14 +42,14 @@ class Mol_dataset(Dataset,MolecularMetrics):
     '''One hot encode list of atom numbers to node feature matrix'''
     X = one_hot(torch.tensor(a_list,device=self.device),num_classes=5)
 
-    return X
+    return X.type(torch.float32)
 
   def adj_mat(self,mol):
 
     '''Input: rdkit mol object
       Output: adjecency tensor size max_num_atoms x max_num_atoms x n_bond_types including no bond'''
 
-    adjecency_mat = torch.zeros((self.N,self.N,5),device=self.device)
+    adjecency_mat = torch.zeros((self.N,self.N,5),device=self.device,dtype=torch.float32)
     for bond in mol.GetBonds():
         start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
         adjecency_mat[start,end,:][bond_dict[bond.GetBondType()]] = 1
@@ -84,7 +84,7 @@ class Mol_dataset(Dataset,MolecularMetrics):
       idx+=1
       mol  = self.suppl[idx]
 
-    r = torch.tensor(Mol_dataset.reward(mol),device=self.device)
+    r = torch.tensor(Mol_dataset.reward(mol),device=self.device,dtype=torch.float32)
 
     return self.adj_mat(mol), self.atom_features(mol), r
 
