@@ -2,8 +2,11 @@ import torch
 from rdkit import Chem
 from molecular_metrics import MolecularMetrics
 from torch.utils.data import Dataset
-import numpy as np
 from torch.nn.functional import one_hot
+
+
+bond_dict = {Chem.rdchem.BondType.SINGLE:0,Chem.rdchem.BondType.DOUBLE:1,
+             Chem.rdchem.BondType.TRIPLE:2,Chem.rdchem.BondType.AROMATIC:3}
 
 
 class Mol_dataset(Dataset,MolecularMetrics):
@@ -14,74 +17,45 @@ class Mol_dataset(Dataset,MolecularMetrics):
   X - node feature matrix
   r - scalar, reward'''
 
-  def __init__(self,sdf_file,atom_set=['C','O','N','F'],N=9):
+  def __init__(self,sdf_file,device,atom_set=['C','O','N','F','*'],N=9):
     self.suppl    = Chem.SDMolSupplier(sdf_file)
     self.atom_set = atom_set
     self.N = N 
     self.atom_to_num  = dict({x:y for x,y in zip(atom_set,range(len(atom_set)))})
+    self.device = device
 
-  
   def __len__(self):
     return len(self.suppl)
-
-  @staticmethod
-  def mol_with_atom_index(mol):
-
-    '''Assign each atom atom index attribute,
-    each index is a 0<unique value<number of atoms'''
-
-    atoms = mol.GetNumAtoms()
-    for idx in range(atoms):
-        mol.GetAtomWithIdx(idx).SetProp('molAtomMapNumber', str(mol.GetAtomWithIdx(idx).GetIdx()))
-    return mol
-  
-  @staticmethod
-  def bond_features(bond):
-
-    '''Input: bond object
-      Output: one-hot vector represenation'''
-
-    bt = bond.GetBondType()
-    return (torch.Tensor([bt == Chem.rdchem.BondType.SINGLE,\
-                          bt == Chem.rdchem.BondType.DOUBLE,\
-                          bt == Chem.rdchem.BondType.TRIPLE,\
-                          bt == Chem.rdchem.BondType.AROMATIC]))
 
   def atom_features(self,mol):
 
     '''Input: rdkit mol object
       Output: node feature matrix size max_num_atoms x n_atom_types including no atom'''
     
-    a_list = []
-    max_atoms_types = len(self.atom_set)
+    a_list = [self.atom_to_num[atom.GetSymbol()] for atom in mol.GetAtoms()]
+    delta  =  self.N - len(a_list)
 
-    for atom in mol.GetAtoms():
-      a_list.append(self.atom_to_num[atom.GetSymbol()])     
-    
-    a_list  = torch.tensor(a_list).type(torch.LongTensor)
-    
-    N_f_mat = one_hot(a_list,num_classes=max_atoms_types)
-    n_atoms = N_f_mat.size()[0]
-    N_f_mat = torch.cat([N_f_mat,torch.zeros((n_atoms,1))],dim=1)
-    delta   = self.N - n_atoms
-
+    '''add empty atoms if n_atoms < max_atoms number'''
     if delta>0:
-      pad = [[0]*max_atoms_types + [1] for _ in range(delta)]
-      pad = torch.tensor(pad).type(torch.LongTensor)
-      N_f_mat = torch.cat([N_f_mat,pad],dim=0)
-    return N_f_mat
+      a_list = a_list + [self.atom_to_num['*']]*delta
+
+    '''One hot encode list of atom numbers to node feature matrix'''
+    X = one_hot(torch.tensor(a_list,device=self.device),num_classes=5)
+
+    return X
 
   def adj_mat(self,mol):
 
     '''Input: rdkit mol object
       Output: adjecency tensor size max_num_atoms x max_num_atoms x n_bond_types including no bond'''
 
-    adjecency_mat = torch.zeros((self.N,self.N,4))
+    adjecency_mat = torch.zeros((self.N,self.N,5),device=self.device)
     for bond in mol.GetBonds():
         start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
-        adjecency_mat[start,end,:] = Mol_dataset.bond_features(bond)
-        adjecency_mat[end,start,:] = Mol_dataset.bond_features(bond)
-    return torch.cat([adjecency_mat,torch.zeros((self.N,self.N,1))],dim=-1)
+        adjecency_mat[start,end,:][bond_dict[bond.GetBondType()]] = 1
+        adjecency_mat[end,start,:][bond_dict[bond.GetBondType()]] = 1
+
+    return adjecency_mat
 
 
   @staticmethod
@@ -107,11 +81,10 @@ class Mol_dataset(Dataset,MolecularMetrics):
     mol = self.suppl[idx]
 
     while mol is None:
-      if mol is None:
-        idx+=1
-        mol  = self.suppl[idx]
+      idx+=1
+      mol  = self.suppl[idx]
 
-    r = Mol_dataset.reward(mol)
+    r = torch.tensor(Mol_dataset.reward(mol),device=self.device)
 
     return self.adj_mat(mol), self.atom_features(mol), r
 

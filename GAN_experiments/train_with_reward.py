@@ -1,6 +1,7 @@
 from model import R,Generator
 from data_loader import Mol_dataset
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
 import torch
 import numpy as np
 import wandb
@@ -19,7 +20,7 @@ if device_type == 'GPU':
     dir_config  = r'/home/zcemg08/Scratch/Mol_gan2/config_files/GAN_param_grid.yaml'
     dir_dataset = r'/home/zcemg08/Scratch/data/gdb9_clean.sdf'
 else:
-    dir_config  = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\GAN_param_grid.yam'
+    dir_config  = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\GAN_param_grid.yaml'
     dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
 
 
@@ -36,7 +37,7 @@ if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
 
 '''Initialise data loader object'''
-data = DataLoader(Mol_dataset(dir_dataset),config.bz,shuffle=True,drop_last=True)
+data = DataLoader(Mol_dataset(dir_dataset,device),config.bz,shuffle=True,drop_last=True,pin_memory=True)
 
 '''Initialise generator G and discriminator D models based on config object'''
 D = R(config,device)
@@ -82,7 +83,7 @@ for epoch in range(config.epochs):
         '''Train discriminator'''
         counter +=1
         opt_D.zero_grad()
-        z = torch.randn(config.bz,config.z_dim).to(device)
+        z = torch.randn(config.bz,config.z_dim,device=device)
         X_fake,A_fake  = G(z)
 
 
@@ -92,8 +93,8 @@ for epoch in range(config.epochs):
         fake_true_reward = reward(fake_mols).unsqueeze(1)
 
         '''Calculate rewards by reward network'''
-        value_real       = V(A.to(device),X.to(device))
-        value_fake       = V(A_fake.to(device),X_fake.to(device))
+        value_real       = V(A,X)
+        value_fake       = V(A_fake,X_fake)
 
         '''Find Value function loss'''
         V_loss = mse(fake_true_reward.to(device),value_fake.to(device)) + mse(real_true_reward.type(torch.float32).to(device),value_real.to(device))
@@ -102,13 +103,13 @@ for epoch in range(config.epochs):
         opt_V.step()
 
         '''Calculate disriminator loss'''
-        D_real, D_fake = wgan_dis(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D)
+        D_real, D_fake = wgan_dis(A,X,A_fake,X_fake,D)
         D_loss = D_fake - D_real
 
         '''apply gradient penalty to discriminator loss if WGAN-GP'''
 
         if config.Lambda is not None:
-            GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
+            GP      =  grad_penalty(A,X,A_fake,X_fake,D,device)
             wandb.log({'GP':GP,'epoch':counter/l})
             D_loss  += config.Lambda*GP
 
@@ -134,11 +135,11 @@ for epoch in range(config.epochs):
             '''Train generator'''
 
             opt_G.zero_grad()
-            z             = torch.randn(config.bz,config.z_dim).to(device)
+            z             = torch.randn(config.bz,config.z_dim,device=device)
             X_fake,A_fake = G(z)
             '''Calculate generator loss'''
-            G_loss        = wgan_gen(A_fake.to(device),X_fake.to(device),D)
-            Rl_loss       = V(A_fake.to(device),X_fake.to(device)).mean()
+            G_loss        = wgan_gen(A_fake,X_fake,D)
+            Rl_loss       = V(A_fake,X_fake).mean()
 
             alpha = G_loss/Rl_loss
 

@@ -8,7 +8,7 @@ from rdkit.Chem import Crippen
 import math
 import numpy as np
 
-device_type = 'GPU'
+device_type = 'CPU'
 
 if device_type == 'CPU':
     NP = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\NP_score.pkl.gz'
