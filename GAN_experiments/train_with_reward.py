@@ -83,23 +83,12 @@ for epoch in range(config.epochs):
         counter +=1
         opt_D.zero_grad()
         z = torch.randn(config.bz,config.z_dim,device=device)
-
-        print('A device',A.device,A.dtype)
-        print('X device',X.device,X.dtype)
-        print('R device',real_true_reward.device,real_true_reward.dtype)
-
         X_fake,A_fake  = G(z)
-
-        print('z device',z.device)
-        print('A fake device',A_fake.device,A_fake.dtype)
-        print('X fake device',X_fake.device,X_fake.dtype)
 
         opt_V.zero_grad()
         '''Calculate actual reward for generated molecules'''
         fake_mols        = A_X_to_mols(A_fake,X_fake,device)
         fake_true_reward = reward(fake_mols).unsqueeze(1)
-
-        print('fake reward type',fake_true_reward.device,fake_true_reward.dtype)
 
         '''Calculate rewards by reward network'''
         value_real       = V(A,X)
