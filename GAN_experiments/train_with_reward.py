@@ -36,7 +36,7 @@ if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
 
 '''Initialise data loader object'''
-data = DataLoader(Mol_dataset(dir_dataset,device),config.bz,shuffle=True,drop_last=True,pin_memory=True)
+data = DataLoader(Mol_dataset(dir_dataset,device),config.bz,shuffle=True,drop_last=True)
 
 '''Initialise generator G and discriminator D models based on config object'''
 D = R(config,device)
