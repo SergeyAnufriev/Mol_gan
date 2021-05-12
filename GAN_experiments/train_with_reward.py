@@ -162,11 +162,11 @@ for epoch in range(config.epochs):
            '''Visual inspection'''
            plot2(A_fake,X_fake)
 
-           '''Valid compounds calculation'''
+           '''
            x,a       = G(z_test)
            mols_fake = A_X_to_mols(a,x,device)
            wandb.log({'valid':MolecularMetrics.valid_total_score(mols_fake),'epoch':counter/l})
-
+           '''
            '''Save generator weights'''
            PATH = os.path.join(run_loc,'G'+'_'+'epoch-{}.pt'.format(epoch))
            torch.save(G, PATH)
