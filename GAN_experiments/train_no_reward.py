@@ -36,7 +36,7 @@ if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
 
 '''Initialise data loader object'''
-data = DataLoader(Mol_dataset(dir_dataset),config.bz,shuffle=True,drop_last=True)
+data = DataLoader(Mol_dataset(dir_dataset,device),config.bz,shuffle=True,drop_last=True)
 
 '''Initialise generator G and discriminator D models based on config object'''
 D = R(config,device)
@@ -54,8 +54,8 @@ if config.Spectral_Norm_D == True:
     D.turn_on_spectral_norm()
 
 '''Optimizers set up'''
-opt_D = torch.optim.RMSprop(D.parameters(), lr=config.lr_d,alpha=0.9)
-opt_G = torch.optim.RMSprop(G.parameters(), lr=config.lr_g,alpha=0.9)
+opt_D = torch.optim.RMSprop(D.parameters(), lr=config.lr_d,alpha=config.alpha)
+opt_G = torch.optim.RMSprop(G.parameters(), lr=config.lr_g,alpha=config.alpha)
 
 
 '''Fixed random number to evaluate Generator model molecules valid score'''
@@ -73,16 +73,16 @@ for epoch in range(config.epochs):
         '''Train discriminator'''
         counter +=1
         opt_D.zero_grad()
-        z = torch.randn(config.bz,config.z_dim).to(device)
+        z = torch.randn(config.bz,config.z_dim,device=device)
         X_fake,A_fake  = G(z)
         '''Calculate disriminator loss'''
-        D_real, D_fake = wgan_dis(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D)
+        D_real, D_fake = wgan_dis(A,X,A_fake,X_fake,D)
         D_loss = D_fake - D_real
 
         '''apply gradient penalty to discriminator loss if WGAN-GP'''
 
         if config.Lambda is not None:
-            GP      =  grad_penalty(A.to(device),X.to(device),A_fake.to(device),X_fake.to(device),D,device)
+            GP      =  grad_penalty(A,X,A_fake,X_fake,D,device)
             wandb.log({'GP':GP,'epoch':counter/l})
             D_loss  += config.Lambda*GP
 
@@ -108,10 +108,10 @@ for epoch in range(config.epochs):
             '''Train generator'''
 
             opt_G.zero_grad()
-            z             = torch.randn(config.bz,config.z_dim).to(device)
+            z             = torch.randn(config.bz,config.z_dim,device=device)
             X_fake,A_fake = G(z)
             '''Calculate generator loss'''
-            G_loss        = wgan_gen(A_fake.to(device),X_fake.to(device),D)
+            G_loss        = wgan_gen(A_fake,X_fake,D)
             G_loss.backward()
 
             '''Log generator statistics'''
@@ -131,11 +131,11 @@ for epoch in range(config.epochs):
            '''Visual inspection'''
            plot2(A_fake,X_fake)
 
-           '''Valid compounds calculation'''
+           '''
            x,a       = G(z_test)
            mols_fake = A_X_to_mols(a,x,device)
            wandb.log({'valid':MolecularMetrics.valid_total_score(mols_fake),'epoch':counter/l})
-
+           '''
            '''Save generator weights'''
            PATH = os.path.join(run_loc,'G'+'_'+'epoch-{}.pt'.format(epoch))
            torch.save(G, PATH)
