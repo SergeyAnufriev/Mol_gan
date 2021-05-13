@@ -1,4 +1,4 @@
-program: /home/zcemg08/Scratch/Mol_gan2/GAN_experiments/train_with_reward.py
+program: /home/zcemg08/Scratch/Mol_gan2/GAN_experiments/train_no_reward.py
 method:  grid
 project: gan_molecular2
 description : GAN molecular no reward
@@ -115,7 +115,7 @@ parameters:
   grad_correction:
     value: null
   reinforcment:
-    value: 0.2
+    value: null
   betta1:
     value: null
   betta2:
