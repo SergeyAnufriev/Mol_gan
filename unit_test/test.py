@@ -4,11 +4,18 @@ from model import R,Generator
 from utils import dotdict,sweep_to_dict,get_children
 from torch.nn.init import _calculate_fan_in_and_fan_out,_calculate_correct_fan,calculate_gain
 import math
+from rdkit import Chem
 
 '''The following functions get tested'''
 from utils import grad_penalty,weight_init
+from valid import A_x_to_mol
+from data_loader import Mol_dataset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+dir_dataset = r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\data\gdb9_clean.sdf'
+suppl       = Chem.SDMolSupplier(dir_dataset)
+dataset = Mol_dataset(dir_dataset,device)
 
 config = sweep_to_dict(r'C:\Users\zcemg08\Documents\GitHub\Mol_gan\config_files\GAN_param_grid.yaml')
 config = dotdict(config)
@@ -19,7 +26,39 @@ Gen    = Generator(config,9,5,5)
 
 class TestSum(unittest.TestCase):
 
-    
+
+    def test_data_loader_and_AX_to_mol(self):
+        '''convert mols to A,X then to mol,
+        check if moles in smiles match'''
+
+        fail_convert     = 0
+        non_equal_mols   = 0
+        non_equal_smiles = 0
+        n_compounds = len(suppl)
+
+        for mol in suppl:
+            '''mol to graph'''
+            A = dataset.adj_mat(mol)
+            X = dataset.atom_features(mol)
+            smiles_original = Chem.MolToSmiles(mol)
+            try:
+                '''graph to mol'''
+                mol_back    = A_x_to_mol(A,X,device)
+                smiles_back = Chem.MolToSmiles(mol_back)
+                if smiles_back != smiles_original:
+                    non_equal_smiles+=1
+                if mol_back != mol:
+                    non_equal_mols+=1
+            except:
+                fail_convert+=1
+
+        mls  = non_equal_mols/n_compounds
+        smi  = non_equal_smiles/n_compounds
+        conv = fail_convert/n_compounds
+
+        self.assertFalse(any(x>0 for x in [mls,smi,conv]),'the fraction encode-decode not equal mols={},'
+                                                          'smiles={},fails to decode={}'.format(mls,smi,conv))
+
     def test_get_children(self):
         '''Test for true number of layers in generator and discriminator'''
         self.assertEqual(sum([1 if c.__class__.__name__ =='Linear' else 0 for c in get_children(Dis)]),15,'Discriminator has 15 linear layers')
