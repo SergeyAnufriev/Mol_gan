@@ -19,7 +19,12 @@ Gen    = Generator(config,9,5,5)
 
 class TestSum(unittest.TestCase):
 
-    '''22-33 Test spectral norm discriminator on/off'''
+    
+    def test_get_children(self):
+        '''Test for true number of layers in generator and discriminator'''
+        self.assertEqual(sum([1 if c.__class__.__name__ =='Linear' else 0 for c in get_children(Dis)]),15,'Discriminator has 15 linear layers')
+        self.assertEqual(sum([1 if c.__class__.__name__ =='Linear' else 0 for c in get_children(Gen)]),5,'Generator has 5 linear layers')
+        
 
     def test_spectral_norm_on(self):
         Dis.turn_on_spectral_norm()
@@ -39,7 +44,7 @@ class TestSum(unittest.TestCase):
                     hook_name = str(hook)
                     self.assertEqual(hook_name.find('SpectralNorm'),-1,'Spectral Norm is applied')
 
-    '''40-84 Test weight initialisation'''
+    #40-84 Test weight initialisation
 
     def test_weight_normal(self):
         Dis.apply(weight_init('normal'))
@@ -68,7 +73,7 @@ class TestSum(unittest.TestCase):
     def test_weight_kaiming_normal(self):
         Dis.apply(weight_init('kaiming_normal'))
         Gen.apply(weight_init('kaiming_normal'))
-        '''Kaiming normal default configs, which are arguments to weight initialisation'''
+        #Kaiming normal default configs, which are arguments to weight initialisation
         nonlinearity = 'leaky_relu'
         mode = 'fan_in'
         a = 0
@@ -87,7 +92,7 @@ class TestSum(unittest.TestCase):
     def test_weight_kaiming_uniform(self):
         Dis.apply(weight_init('kaiming_normal'))
         Gen.apply(weight_init('kaiming_normal'))
-        '''Kaiming uniform default configs, which are arguments to weight initialisation'''
+        #Kaiming uniform default configs, which are arguments to weight initialisation
         nonlinearity = 'leaky_relu'
         mode = 'fan_in'
         a = 0
@@ -95,12 +100,12 @@ class TestSum(unittest.TestCase):
             for c in get_children(model):
                 if c.__class__.__name__ =='Linear':
                     data           = c.weight.data
-                    '''calculate expected unifrom distr bound'''
+                    #calculate expected unifrom distr bound
                     fan = _calculate_correct_fan(data, mode)
                     gain = calculate_gain(nonlinearity, a)
                     std = gain / math.sqrt(fan)
                     bound = math.sqrt(3.0) * std
-                    self.assertTrue(torch.abs(torch.max(data))<bound)
+                    self.assertTrue(torch.abs(torch.max(data))<bound,'Weight values outside (-bound,bound) range')
 
 
 

@@ -7,3 +7,4 @@
 /data
 /gan_optimizers
 /config_files/wandb
+/original_gan
