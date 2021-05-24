@@ -59,7 +59,7 @@ opt_G = torch.optim.RMSprop(G.parameters(), lr=config.lr_g,alpha=config.alpha)
 
 
 '''Fixed random number to evaluate Generator model molecules valid score'''
-z_test             = torch.randn(5000,config.z_dim,device=device)
+z_test             = torch.randn(config.test_size,config.z_dim,device=device)
 
 '''Model chemical validity evaluation frequency = epoch/k'''
 l = len(data)
@@ -131,11 +131,11 @@ for epoch in range(config.epochs):
            '''Visual inspection'''
            plot2(A_fake,X_fake)
 
-           '''
+
            x,a       = G(z_test)
            mols_fake = A_X_to_mols(a,x,device)
            wandb.log({'valid':MolecularMetrics.valid_total_score(mols_fake),'epoch':counter/l})
-           '''
+
            '''Save generator weights'''
            PATH = os.path.join(run_loc,'G'+'_'+'epoch-{}.pt'.format(epoch))
            torch.save(G, PATH)
